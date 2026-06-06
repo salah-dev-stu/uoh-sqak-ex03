@@ -6,19 +6,15 @@ MAX_LINES = 150
 SCAN_DIRS = ["src", "tests", "scripts"]
 
 
-def count_logical_lines(path: Path) -> int:
-    lines = path.read_text(encoding="utf-8", errors="ignore").splitlines()
-    return sum(
-        1 for line in lines
-        if line.strip() and not line.strip().startswith("#")
-    )
+def count_lines(path: Path) -> int:
+    return sum(1 for _ in path.read_text(encoding="utf-8", errors="ignore").splitlines())
 
 
 def main() -> int:
     violations: list[tuple[Path, int]] = []
     for d in SCAN_DIRS:
         for p in Path(d).rglob("*.py"):
-            n = count_logical_lines(p)
+            n = count_lines(p)
             if n > MAX_LINES:
                 violations.append((p, n))
     if violations:
