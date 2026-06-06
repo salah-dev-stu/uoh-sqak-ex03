@@ -1,0 +1,63 @@
+# Secrets
+.env
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+
+# Testing
+.pytest_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+.coverage.*
+
+# Virtual environments (forbidden - use uv only)
+.venv/
+venv/
+env/
+
+# Intermediate artifacts (not committed)
+workspace/
+
+# LaTeX build artifacts
+latex/output/*.pdf
+latex/output/*.aux
+latex/output/*.log
+latex/output/*.toc
+latex/output/*.bbl
+latex/output/*.blg
+latex/output/*.bcf
+latex/output/*.xml
+latex/output/*.out
+latex/output/*.fls
+latex/output/*.fdb_latexmk
+latex/output/*.synctex.gz
+*.aux
+*.log
+*.toc
+*.bbl
+*.blg
+*.synctex.gz
+*.fls
+*.fdb_latexmk
+*.out
+
+# Logs
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
