@@ -1,5 +1,6 @@
 """Abstract base for all CrewAI agents in the article pipeline."""
 from abc import ABC, abstractmethod
+from typing import Any
 
 from crewai import Agent
 
@@ -23,12 +24,25 @@ class BaseAgent(ABC):
     @abstractmethod
     def build(self) -> Agent: ...
 
+    def _resolve_llm(self) -> Any:
+        """Return an LLM object based on config llm key."""
+        llm_key = self._cfg.get("llm", "claude-cli")
+        if llm_key == "claude-cli":
+            from agent_article.shared.claude_cli_llm import ClaudeCLILLM
+            return ClaudeCLILLM()
+        return None
+
     def _make_agent(self) -> Agent:
         backstory = self._cfg["backstory"] + "\n\n---\n\n" + self._skill.content
-        return Agent(
-            role=self._cfg["role"],
-            goal=self._cfg["goal"],
-            backstory=backstory,
-            tools=[t.as_crewai_tool() for t in self._tools],
-            verbose=True,
-        )
+        llm = self._resolve_llm()
+        kwargs: dict[str, Any] = {
+            "role": self._cfg["role"],
+            "goal": self._cfg["goal"],
+            "backstory": backstory,
+            "tools": [t.as_crewai_tool() for t in self._tools],
+            "verbose": True,
+            "max_iter": self._cfg.get("max_iter", 3),
+        }
+        if llm is not None:
+            kwargs["llm"] = llm
+        return Agent(**kwargs)

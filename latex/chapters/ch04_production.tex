@@ -59,3 +59,14 @@ Every component tracks a version string starting at \texttt{1.00} and incremente
 \end{equation}
 
 This simple scheme ensures graders can audit change history without parsing commit messages.
+
+% generated
+Permission needed — please approve the write to `workspace/chapters/ch04_production.md`, then I'll retry. The replacement is:
+
+```latex
+\begin{equation}
+    C_{\text{total}} = \sum_{i=1}^{N} \bigl( p_{\text{in}} \cdot T_i^{\text{prompt}} + p_{\text{out}} \cdot T_i^{\text{completion}} \bigr)
+\end{equation}
+```
+
+This models total pipeline cost as the sum over N agents of (input-price × prompt-tokens + output-price × completion-tokens), which is the exact formula the surrounding prose describes.
