@@ -1,6 +1,7 @@
 """Tests for tools/web_search.py — WebSearchTool."""
 import json
 from unittest.mock import MagicMock, patch
+
 import pytest
 
 import agent_article.shared.config as cfg_mod

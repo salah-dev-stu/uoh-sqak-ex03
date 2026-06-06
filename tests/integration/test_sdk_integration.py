@@ -1,11 +1,10 @@
 """Integration tests — SDK + crew pipeline with mock LLM."""
 import json
-from pathlib import Path
 from unittest.mock import MagicMock, patch
+
 import pytest
 
 import agent_article.shared.config as cfg_mod
-from agent_article.shared.gatekeeper import ApiGatekeeper
 
 
 @pytest.fixture
@@ -44,10 +43,10 @@ def full_env(tmp_path, monkeypatch):
 
 def test_sdk_generate_returns_result(full_env):
     """SDK.generate() should return a CrewResult regardless of success/failure."""
-    from agent_article.sdk.sdk import ArticleSDK
-    from agent_article.crew.article_crew import CrewResult
     import agent_article.crew.article_crew as cm
-    mock_result = CrewResult(success=True, pdf_path="latex/output/uoh-sqak-article.pdf")
+    from agent_article.crew.article_crew import CrewResult
+    from agent_article.sdk.sdk import ArticleSDK
+    CrewResult(success=True, pdf_path="latex/output/uoh-sqak-article.pdf")
     with patch.object(cm, "ResearcherAgent", return_value=MagicMock()),\
          patch.object(cm, "WriterAgent", return_value=MagicMock()),\
          patch.object(cm, "EditorAgent", return_value=MagicMock()),\
@@ -81,8 +80,8 @@ def test_sdk_approve_markdown_empty_dir(full_env):
 
 
 def test_crew_result_captures_errors(full_env):
-    from agent_article.crew.article_crew import ArticleCrew
     import agent_article.crew.article_crew as cm
+    from agent_article.crew.article_crew import ArticleCrew
     with patch.object(cm, "ResearcherAgent", side_effect=ValueError("config missing")):
         result = ArticleCrew("test topic").run()
     assert result.success is False

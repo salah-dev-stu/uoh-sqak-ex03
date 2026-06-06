@@ -1,6 +1,7 @@
 """Task definitions for the article-writing crew."""
-from crewai import Task
 from typing import TYPE_CHECKING
+
+from crewai import Task
 
 from agent_article.shared.config import cfg
 from agent_article.shared.logging_fifo import StructuredLogger

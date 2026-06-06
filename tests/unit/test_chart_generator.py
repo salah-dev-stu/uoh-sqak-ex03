@@ -1,5 +1,6 @@
 """Tests for tools/chart_generator.py — ChartGeneratorTool."""
 import json
+
 import pytest
 
 import agent_article.shared.config as cfg_mod

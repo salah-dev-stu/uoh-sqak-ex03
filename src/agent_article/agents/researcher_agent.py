@@ -1,9 +1,10 @@
 """Researcher agent — searches the web and writes structured research notes."""
 from crewai import Agent
 
-from .base_agent import BaseAgent
-from agent_article.tools.web_search import WebSearchTool
 from agent_article.tools.file_rw import FileWriteTool
+from agent_article.tools.web_search import WebSearchTool
+
+from .base_agent import BaseAgent
 
 
 class ResearcherAgent(BaseAgent):

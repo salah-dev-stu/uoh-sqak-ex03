@@ -2,10 +2,10 @@
 from pathlib import Path
 
 from agent_article.crew.article_crew import ArticleCrew, CrewResult
+from agent_article.shared import version as ver
 from agent_article.shared.config import cfg, get_config
 from agent_article.shared.gatekeeper import ApiGatekeeper
 from agent_article.shared.logging_fifo import StructuredLogger
-from agent_article.shared import version as ver
 
 _log = StructuredLogger("sdk")
 

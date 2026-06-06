@@ -1,6 +1,7 @@
 """Tests for ArticleCrew assembly and run."""
 import json
 from unittest.mock import MagicMock, patch
+
 import pytest
 
 import agent_article.shared.config as cfg_mod
@@ -52,8 +53,8 @@ def _mock_agent():
 
 
 def test_crew_run_success(full_config):
-    from agent_article.crew.article_crew import ArticleCrew
     import agent_article.crew.article_crew as cm
+    from agent_article.crew.article_crew import ArticleCrew
     mock_kickoff = MagicMock(return_value="done")
     with patch.object(cm, "ResearcherAgent", return_value=_mock_agent()), \
          patch.object(cm, "WriterAgent", return_value=_mock_agent()), \
@@ -71,8 +72,8 @@ def test_crew_run_success(full_config):
 
 
 def test_crew_run_failure(full_config):
-    from agent_article.crew.article_crew import ArticleCrew
     import agent_article.crew.article_crew as cm
+    from agent_article.crew.article_crew import ArticleCrew
     with patch.object(cm, "ResearcherAgent", side_effect=RuntimeError("boom")):
         result = ArticleCrew("Test Topic").run()
     assert result.success is False

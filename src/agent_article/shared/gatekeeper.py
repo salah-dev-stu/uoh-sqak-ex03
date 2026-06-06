@@ -2,8 +2,9 @@
 import threading
 import time
 from collections import defaultdict, deque
-from dataclasses import dataclass, field
-from typing import Any, Callable
+from collections.abc import Callable
+from dataclasses import dataclass
+from typing import Any
 
 from .config import get_config
 from .logging_fifo import StructuredLogger

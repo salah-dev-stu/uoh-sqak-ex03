@@ -1,10 +1,9 @@
 """Rich terminal UI menu for article generation."""
 from __future__ import annotations
-from pathlib import Path
 
 from rich.console import Console
 from rich.panel import Panel
-from rich.prompt import Prompt, Confirm
+from rich.prompt import Prompt
 from rich.table import Table
 
 from agent_article.sdk.sdk import ArticleSDK

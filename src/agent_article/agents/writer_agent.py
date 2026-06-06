@@ -1,8 +1,9 @@
 """Writer agent — produces Markdown chapters from research notes."""
 from crewai import Agent
 
-from .base_agent import BaseAgent
 from agent_article.tools.file_rw import FileReadTool, FileWriteTool
+
+from .base_agent import BaseAgent
 
 
 class WriterAgent(BaseAgent):

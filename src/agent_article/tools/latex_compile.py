@@ -3,9 +3,10 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
-from .base_tool import BaseTool
 from agent_article.shared.config import get_config
 from agent_article.shared.logging_fifo import StructuredLogger
+
+from .base_tool import BaseTool
 
 
 class LaTeXCompileTool(BaseTool):

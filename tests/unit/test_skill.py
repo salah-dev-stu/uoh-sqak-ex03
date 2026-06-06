@@ -1,6 +1,6 @@
 """Tests for skills/base_skill.py — BaseSkill and FileSkill."""
-from pathlib import Path
 import pytest
+
 from agent_article.skills.base_skill import FileSkill
 
 
@@ -20,7 +20,7 @@ def test_strips_yaml_frontmatter(tmp_path) -> None:
 
 def test_missing_raises_file_not_found(tmp_path) -> None:
     with pytest.raises(FileNotFoundError):
-        FileSkill(tmp_path / "nonexistent").content
+        _ = FileSkill(tmp_path / "nonexistent").content
 
 
 def test_loads_researcher_skill() -> None:

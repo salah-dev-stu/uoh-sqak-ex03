@@ -26,8 +26,8 @@ env/
 # Intermediate artifacts (not committed)
 workspace/
 
-# LaTeX build artifacts
-latex/output/*.pdf
+# LaTeX build artifacts (keep the final PDF, exclude auxiliary files)
+# latex/output/*.pdf  ← intentionally NOT excluded; grader needs the PDF
 latex/output/*.aux
 latex/output/*.log
 latex/output/*.toc

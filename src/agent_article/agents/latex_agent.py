@@ -1,10 +1,11 @@
 """LaTeX-Producer agent — converts Markdown to LaTeX and compiles PDF."""
 from crewai import Agent
 
-from .base_agent import BaseAgent
+from agent_article.tools.chart_generator import ChartGeneratorTool
 from agent_article.tools.file_rw import FileReadTool, FileWriteTool
 from agent_article.tools.latex_compile import LaTeXCompileTool
-from agent_article.tools.chart_generator import ChartGeneratorTool
+
+from .base_agent import BaseAgent
 
 
 class LaTeXAgent(BaseAgent):

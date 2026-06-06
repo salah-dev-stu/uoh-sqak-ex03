@@ -1,5 +1,5 @@
 """Tests for constants.py."""
-from agent_article.constants import AgentRole, ServiceName, ProcessType
+from agent_article.constants import AgentRole, ProcessType, ServiceName
 
 
 def test_agent_role_values() -> None:

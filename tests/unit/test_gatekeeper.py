@@ -1,6 +1,8 @@
 """Tests for shared/gatekeeper.py."""
 import json
+
 import pytest
+
 import agent_article.shared.config as cfg_mod
 from agent_article.shared.gatekeeper import ApiGatekeeper, GatekeeperError
 

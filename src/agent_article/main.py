@@ -1,5 +1,6 @@
 """Entry point — delegates to TUI or direct CLI invocation."""
 from __future__ import annotations
+
 import sys
 
 

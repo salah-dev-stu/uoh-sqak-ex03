@@ -1,6 +1,7 @@
 """Tests for ArticleSDK public interface."""
 import json
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
+
 import pytest
 
 import agent_article.shared.config as cfg_mod
@@ -49,8 +50,8 @@ def test_sdk_version():
 
 
 def test_sdk_generate_delegates_to_crew(full_config):
-    from agent_article.sdk.sdk import ArticleSDK
     from agent_article.crew.article_crew import CrewResult
+    from agent_article.sdk.sdk import ArticleSDK
     mock_result = CrewResult(success=True, pdf_path="latex/output/test.pdf")
     with patch("agent_article.sdk.sdk.ArticleCrew") as mock_crew_cls:
         mock_crew_cls.return_value.run.return_value = mock_result

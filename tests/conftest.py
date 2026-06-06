@@ -1,5 +1,6 @@
 """Shared pytest fixtures for unit and integration tests."""
 import json
+
 import pytest
 
 import agent_article.shared.config as cfg_mod

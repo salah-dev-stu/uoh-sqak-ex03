@@ -4,18 +4,18 @@ from pathlib import Path
 
 from crewai import Crew, Process
 
-from agent_article.agents.researcher_agent import ResearcherAgent
-from agent_article.agents.writer_agent import WriterAgent
 from agent_article.agents.editor_agent import EditorAgent
 from agent_article.agents.latex_agent import LaTeXAgent
-from agent_article.tasks.article_tasks import (
-    build_research_task,
-    build_write_task,
-    build_edit_task,
-    build_latex_task,
-)
+from agent_article.agents.researcher_agent import ResearcherAgent
+from agent_article.agents.writer_agent import WriterAgent
 from agent_article.shared.config import cfg
 from agent_article.shared.logging_fifo import StructuredLogger
+from agent_article.tasks.article_tasks import (
+    build_edit_task,
+    build_latex_task,
+    build_research_task,
+    build_write_task,
+)
 
 _log = StructuredLogger("crew")
 

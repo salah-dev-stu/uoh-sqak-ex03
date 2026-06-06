@@ -1,6 +1,7 @@
 """Tests for main entry point and TUI helpers."""
-from unittest.mock import patch, MagicMock
 import json
+from unittest.mock import patch
+
 import pytest
 
 import agent_article.shared.config as cfg_mod
@@ -46,6 +47,7 @@ def minimal_config(tmp_path, monkeypatch):
 def test_main_calls_run_tui(minimal_config):
     with patch("agent_article.menu.tui.run_tui") as mock_tui:
         import importlib
+
         import agent_article.main as m
         importlib.reload(m)
         ret = m.main()

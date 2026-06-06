@@ -1,6 +1,7 @@
 """Tests for tools/latex_compile.py — LaTeXCompileTool."""
 import json
 from unittest.mock import patch
+
 import pytest
 
 import agent_article.shared.config as cfg_mod
@@ -60,9 +61,9 @@ def test_raises_on_nonzero_returncode(tmp_path) -> None:
 
     latex_dir = tmp_path / "latex2"
     latex_dir.mkdir()
-    with patch("agent_article.tools.latex_compile.subprocess.run", fail_run):
-        with pytest.raises(RuntimeError):
-            LaTeXCompileTool(latex_dir=latex_dir).run("main.tex")
+    with patch("agent_article.tools.latex_compile.subprocess.run", fail_run), \
+         pytest.raises(RuntimeError):
+        LaTeXCompileTool(latex_dir=latex_dir).run("main.tex")
 
 
 def test_tool_name(tmp_path) -> None:

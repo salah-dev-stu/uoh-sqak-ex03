@@ -24,6 +24,7 @@ class WebSearchTool(BaseTool):
 
     def run(self, query: str, max_results: int = 5, **_: Any) -> str:
         from duckduckgo_search import DDGS
+
         from agent_article.shared.gatekeeper import ApiGatekeeper
 
         def _search() -> list[dict]:

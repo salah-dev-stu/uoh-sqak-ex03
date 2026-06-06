@@ -1,6 +1,7 @@
 """Tests for agents — config loading, skill injection, tool wiring."""
 import json
 from unittest.mock import MagicMock, patch
+
 import pytest
 
 import agent_article.shared.config as cfg_mod
@@ -53,7 +54,7 @@ def test_researcher_builds_crewai_agent(agent_config) -> None:
     from agent_article.agents.researcher_agent import ResearcherAgent
     with patch("agent_article.agents.base_agent.Agent") as mock_agent:
         mock_agent.return_value = MagicMock()
-        agent = ResearcherAgent().build()
+        ResearcherAgent().build()
     mock_agent.assert_called_once()
     kw = mock_agent.call_args.kwargs
     assert kw["role"] == "R"
@@ -66,10 +67,10 @@ def test_latex_agent_goal_has_fancy_formula(agent_config) -> None:
 
 
 def test_all_4_agents_build_without_error(agent_config) -> None:
-    from agent_article.agents.researcher_agent import ResearcherAgent
-    from agent_article.agents.writer_agent import WriterAgent
     from agent_article.agents.editor_agent import EditorAgent
     from agent_article.agents.latex_agent import LaTeXAgent
+    from agent_article.agents.researcher_agent import ResearcherAgent
+    from agent_article.agents.writer_agent import WriterAgent
     with patch("agent_article.agents.base_agent.Agent", return_value=MagicMock()):
         ResearcherAgent().build()
         WriterAgent().build()
