@@ -59,12 +59,24 @@
 \fancyfoot[C]{\thepage}
 \renewcommand{\headrulewidth}{0.4pt}
 
-% Bibliography (biblatex + biber)
-\RequirePackage[backend=biber, style=authoryear, sorting=nyt, hyperref=true]{biblatex}
+% Bibliography (biblatex + biber) — numeric-comp: numbered refs [1][2]→[1,2]
+\RequirePackage[backend=biber, style=numeric-comp, sorting=nyt, hyperref=true]{biblatex}
 \addbibresource{bib/references.bib}
 
 % Hyperlinks
 \RequirePackage[colorlinks=true, linkcolor=uohblue, citecolor=uohblue, urlcolor=uohblue]{hyperref}
+
+% etoc — enables per-chapter TOC entry style customisation (used by ch05 for RTL entries)
+% \etocstandardlines: use the report class's own \l@chapter/\l@section styles by default.
+% Without this, etoc's own default style shows "6.1, p. 12" format for all TOC lines.
+\RequirePackage{etoc}
+\etocstandardlines
+
+% Dot leader matching \@dottedtocline (4.5mu spacing) for use in \addtocontents{toc}.
+% Must be defined here (where @ is a letter) so \m@th is parsed as a control sequence.
+% Usage in document body: \protect\hebrewdotleaders
+\newcommand{\hebrewdotleaders}{%
+  \leaders\hbox{$\m@th\mkern 4.5mu.\mkern 4.5mu$}\hfill\nobreak}
 
 % Listings / code
 \RequirePackage{listings}
@@ -76,11 +88,45 @@
   numberstyle=\tiny\color{uohgray},
 }
 
-% Chapter/section formatting
+% Chapter/section formatting (LTR default)
 \RequirePackage{titlesec}
 \titleformat{\chapter}[display]
   {\normalfont\LARGE\bfseries\color{uohblue}}
   {\chaptertitlename\ \thechapter}{12pt}{\LARGE}
+\titleformat{\section}
+  {\normalfont\Large\bfseries\color{uohblue}}{\thesection}{1em}{}
+\titleformat{\subsection}
+  {\normalfont\large\bfseries}{\thesubsection}{1em}{}
+
+% RTL heading format — use \hebrewheadingformat before a Hebrew chapter
+% and \defaultheadingformat after it to restore LTR alignment.
+\newcommand{\hebrewheadingformat}{%
+  \titleformat{\chapter}[display]%
+    {\normalfont\LARGE\bfseries\color{uohblue}}%
+    {\chaptertitlename\ \thechapter}{12pt}{\LARGE\raggedleft}%
+  % Hebrew sections: empty label; caller embeds \thesection at the END of the
+  % title text so that with \raggedleft the number appears at the right edge.
+  % Pattern: \section[TOC-title]{\texthebrew{title}\quad\thesection}
+  \titleformat{\section}[block]%
+    {\normalfont\Large\bfseries\color{uohblue}\raggedleft}%
+    {}%
+    {0em}%
+    {}%
+  \titleformat{\subsection}[block]%
+    {\normalfont\large\bfseries\raggedleft}%
+    {}%
+    {0em}%
+    {}%
+}
+\newcommand{\defaultheadingformat}{%
+  \titleformat{\chapter}[display]%
+    {\normalfont\LARGE\bfseries\color{uohblue}}%
+    {\chaptertitlename\ \thechapter}{12pt}{\LARGE}%
+  \titleformat{\section}%
+    {\normalfont\Large\bfseries\color{uohblue}}{\thesection}{1em}{}%
+  \titleformat{\subsection}%
+    {\normalfont\large\bfseries}{\thesubsection}{1em}{}%
+}
 
 % Table of contents depth
 \setcounter{tocdepth}{2}

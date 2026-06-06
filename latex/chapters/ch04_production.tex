@@ -60,13 +60,16 @@ Every component tracks a version string starting at \texttt{1.00} and incremente
 
 This simple scheme ensures graders can audit change history without parsing commit messages.
 
-% generated
-Permission needed — please approve the write to `workspace/chapters/ch04_production.md`, then I'll retry. The replacement is:
+\section{Pipeline Cost Model}
 
-```latex
+The total cost of running $N$ agents is the sum of per-agent token costs:
+
 \begin{equation}
-    C_{\text{total}} = \sum_{i=1}^{N} \bigl( p_{\text{in}} \cdot T_i^{\text{prompt}} + p_{\text{out}} \cdot T_i^{\text{completion}} \bigr)
+  C_{\text{total}} = \sum_{i=1}^{N}
+    \bigl( p_{\text{in}} \cdot T_i^{\text{prompt}} + p_{\text{out}} \cdot T_i^{\text{completion}} \bigr)
+  \label{eq:cost}
 \end{equation}
-```
 
-This models total pipeline cost as the sum over N agents of (input-price × prompt-tokens + output-price × completion-tokens), which is the exact formula the surrounding prose describes.
+where $p_{\text{in}}$ and $p_{\text{out}}$ are the input and output price per token, and
+$T_i^{\text{prompt}}$, $T_i^{\text{completion}}$ are the token counts for agent $i$.
+This formula drives the \texttt{ApiGatekeeper} spend report returned by \texttt{SDK.spend\_report()}.

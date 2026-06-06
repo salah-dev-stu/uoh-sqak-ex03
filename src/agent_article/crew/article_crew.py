@@ -73,10 +73,30 @@ class ArticleCrew:
             output = crew.kickoff()
             result.raw_output = str(output)
             output_filename = cfg("setup", "output_filename", "uoh-sqak-article.pdf")
-            result.pdf_path = str(Path("latex/output") / output_filename)
+            pdf_path = Path("latex/output") / output_filename
+            # Agents may not call file tools (claude -p bypasses ReAct tool loop).
+            # Compile explicitly from the latex/ directory to guarantee a fresh PDF.
+            _log.info("Post-crew: running LaTeX compilation pass")
+            compiled = self._compile_pdf()
+            if compiled:
+                import shutil
+                shutil.copy2(compiled, pdf_path)
+            result.pdf_path = str(pdf_path)
             result.success = True
             _log.info(f"Crew run complete: pdf_path={result.pdf_path}")
         except Exception as exc:
             result.errors.append(str(exc))
             _log.error(f"Crew run failed: {exc}")
         return result
+
+    def _compile_pdf(self) -> Path | None:
+        """Run lualatex→biber→lualatex→lualatex and return the compiled PDF path."""
+        from agent_article.tools.latex_compile import LaTeXCompileTool
+        try:
+            tool = LaTeXCompileTool()
+            pdf = tool.run("main.tex")
+            _log.info(f"LaTeX compile succeeded: {pdf}")
+            return Path(pdf)
+        except Exception as exc:
+            _log.error(f"LaTeX compile failed: {exc}")
+            return None

@@ -17,7 +17,7 @@ class ClaudeCLILLM(BaseLLM):
     Setup:  claude CLI must be logged in (claude --login)
     """
 
-    timeout: int = 300
+    timeout: int = 1200
     llm_type: str = "claude-cli"
 
     @model_validator(mode="before")

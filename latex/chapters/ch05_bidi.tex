@@ -1,57 +1,120 @@
 % Chapter 5: BiDi — Hebrew + English
-\chapter{דו-כיווניות: עברית ואנגלית במערכות סוכנים}
+% Rule H8: demonstrates Hebrew↔English BiDi per spec.
+%
+% KEY RULES for LuaLaTeX + polyglossia (luabidi):
+%   1. \chapter{\texthebrew{...}} — fixes character reversal in title + TOC entry
+%   2. \hebrewheadingformat → right-aligns chapter and HEBREW section headings
+%   3. \defaultheadingformat → restores LTR BEFORE the English section 5.4
+%   4. Body paragraphs in \begin{hebrew}...\end{hebrew}
+%   5. English terms inside Hebrew blocks MUST use \foreignlanguage{english}{...}
+%      otherwise luabidi reverses individual characters (LuaLaTeX → XeTaLauL)
+%   6. \addtocontents{toc}{...} injects Hebrew TOC styles (number left, dots, title right)
+
+% Inject Hebrew TOC style into .toc file — takes effect during \tableofcontents (pass 2+)
+% Layout for Hebrew entries: number [1em] [dotfill] [1em] title [1em] page
+\addtocontents{toc}{%
+  \protect\etocsetstyle{chapter}{}{}%
+  {\protect\addvspace{1.0em plus 1pt}%
+   \begingroup\parindent0pt\noindent\bfseries%
+     \etocpage\hfill{\color{uohblue}\etocname\hspace{1em}\etocnumber}%
+   \par\endgroup}%
+  {}%
+  \protect\etocsetstyle{section}{}{}%
+  {\begingroup\parindent0pt\noindent\normalfont\normalsize%
+     \etocpage\hspace{0.5em}\protect\hebrewdotleaders\hspace{0.5em}%
+     \etocname\hspace{0.5em}\etocnumber%
+   \par\endgroup}%
+  {}%
+}
+
+\hebrewheadingformat  % right-align headings for this Hebrew chapter
+\chapter{\texthebrew{דו-כיווניות: עברית ואנגלית במערכות סוכנים}}
 \label{ch:bidi}
 
-% Note: this chapter demonstrates BiDi (Hebrew↔English) per rule H8
-% Hebrew paragraphs use \begin{hebrew}...\end{hebrew} (polyglossia)
-
-\section{מבוא לתיאום רב-לשוני}
+% ---- Section 5.1 --------------------------------------------------------
+% \mbox{\setLTR...} is opaque to BiDi — prevents EN from being absorbed into RTL run
+\section[\texthebrew{מבוא לתיאום רב-לשוני}]{\texthebrew{מבוא לתיאום רב-לשוני}\mbox{\setLTR\enspace\thesection}}
 
 \begin{hebrew}
-מערכות רב-סוכניות מודרניות נדרשות לתמוך בשפות מרובות, ובמיוחד בטקסט דו-כיווני (BiDi).
-שפת עברית נכתבת מימין לשמאל (RTL), בעוד שמונחים טכניים באנגלית מוטמעים בתוך הטקסט
-בכיוון שמאל-לימין (LTR). מנוע \texttt{LuaLaTeX} יחד עם חבילת \texttt{polyglossia}
-מספקים פתרון מלא לבעיה זו.
+מערכות רב-סוכניות מודרניות נדרשות לתמוך בשפות מרובות, ובמיוחד בטקסט דו-כיווני
+(\foreignlanguage{english}{BiDi}).
+שפת עברית נכתבת מימין לשמאל (\foreignlanguage{english}{RTL}), בעוד שמונחים
+טכניים באנגלית מוטמעים בתוך הטקסט בכיוון שמאל-לימין (\foreignlanguage{english}{LTR}).
+מנוע \foreignlanguage{english}{\texttt{LuaLaTeX}} יחד עם חבילת
+\foreignlanguage{english}{\texttt{polyglossia}} מספקים פתרון מלא לבעיה זו.
 \end{hebrew}
 
-\section{אדריכלות מערכת הסוכנים}
+% ---- Section 5.2 --------------------------------------------------------
+\section[\texthebrew{אדריכלות מערכת הסוכנים}]{\texthebrew{אדריכלות מערכת הסוכנים}\mbox{\setLTR\enspace\thesection}}
 
 \begin{hebrew}
 הצוות שיצר מאמר זה מורכב מארבעה סוכנים המסודרים בצינור עיבוד רציף:
 \begin{enumerate}
-  \item \textbf{סוכן המחקר} (ResearcherAgent) — אוסף מידע ממקורות אינטרנטיים באמצעות
-        כלי DuckDuckGo ומייצר קובץ הערות מחקר מובנה.
-  \item \textbf{סוכן הכתיבה} (WriterAgent) — ממיר את הערות המחקר לפרקים מובנים
-        בפורמט Markdown, כולל פרק זה הכתוב בעברית.
-  \item \textbf{סוכן העריכה} (EditorAgent) — עורך ומשכלל את הפרקים, מוודא עקביות
-        במינוח ובציטוטים.
-  \item \textbf{סוכן ה-LaTeX} (LaTeXAgent) — ממיר את הפרקים הערוכים לפורמט LaTeX
-        ומריץ ארבעה מעברי קומפילציה עם \texttt{biber}.
+  \item \textbf{סוכן המחקר}
+        (\foreignlanguage{english}{ResearcherAgent}) —
+        אוסף מידע ממקורות אינטרנטיים באמצעות כלי
+        \foreignlanguage{english}{DuckDuckGo}
+        ומייצר קובץ הערות מחקר מובנה.
+  \item \textbf{סוכן הכתיבה}
+        (\foreignlanguage{english}{WriterAgent}) —
+        ממיר את הערות המחקר לפרקים מובנים בפורמט
+        \foreignlanguage{english}{Markdown},
+        כולל פרק זה הכתוב בעברית.
+  \item \textbf{סוכן העריכה}
+        (\foreignlanguage{english}{EditorAgent}) —
+        עורך ומשכלל את הפרקים, מוודא עקביות במינוח ובציטוטים.
+  \item \textbf{סוכן ה-\foreignlanguage{english}{LaTeX}}
+        (\foreignlanguage{english}{LaTeXAgent}) —
+        ממיר את הפרקים הערוכים לפורמט
+        \foreignlanguage{english}{LaTeX}
+        ומריץ ארבעה מעברי קומפילציה עם
+        \foreignlanguage{english}{\texttt{biber}}.
 \end{enumerate}
 \end{hebrew}
 
-\section{אתגרי BiDi בייצור}
+% ---- Section 5.3 --------------------------------------------------------
+\section[\texthebrew{אתגרי \foreignlanguage{english}{BiDi} בייצור}]{\texthebrew{אתגרי \foreignlanguage{english}{BiDi} בייצור}\mbox{\setLTR\enspace\thesection}}
 
 \begin{hebrew}
 הטמעת טקסט עברי בתוך מסמך מדעי-טכני מציבה מספר אתגרים:
 
 \textbf{ניהול ניקוד ופיסוק:}
-מספרים ולוגיקה פורמלית (כגון משוואות) חייבים להיות מוצגים בכיוון LTR אפילו בתוך
-פסקת RTL. חבילת \texttt{amsmath} עובדת כראוי עם \texttt{polyglossia} כאשר הסביבות
-\texttt{equation} ו-\texttt{align} מוגדרות כ-LTR אוטומטית.
+מספרים ולוגיקה פורמלית חייבים להיות מוצגים בכיוון
+\foreignlanguage{english}{LTR} אפילו בתוך פסקת
+\foreignlanguage{english}{RTL}.
+חבילת \foreignlanguage{english}{\texttt{amsmath}} עובדת כראוי עם
+\foreignlanguage{english}{\texttt{polyglossia}} כאשר סביבות
+\foreignlanguage{english}{\texttt{equation}} ו-\foreignlanguage{english}{\texttt{align}}
+מוגדרות כ-\foreignlanguage{english}{LTR} אוטומטית.
 
 \textbf{גופנים:}
-שימוש ב-\texttt{FreeSerif} מספק כיסוי Unicode מלא לעברית ולאנגלית ללא צורך בהתאמות
-מיוחדות. הגדרת \texttt{hebrewfont} ב-\texttt{article.sty} מאפשרת מעבר חלק בין שפות.
+שימוש ב-\foreignlanguage{english}{\texttt{FreeSerif}} מספק כיסוי
+\foreignlanguage{english}{Unicode} מלא לעברית ולאנגלית ללא צורך בהתאמות מיוחדות.
+הגדרת \foreignlanguage{english}{\texttt{hebrewfont}} ב-%
+\foreignlanguage{english}{\texttt{article.sty}} מאפשרת מעבר חלק בין שפות.
 \end{hebrew}
 
+% Restore standard LaTeX TOC style before the English section.
+% \etocstandardlines restores the report class's native \l@chapter/\l@section format
+% (number left · dots · title · page right). \etocdefaultlines would give etoc's own
+% default which shows "5.4, p. 10" format — wrong for LTR sections.
+\addtocontents{toc}{\protect\etocstandardlines}
+\defaultheadingformat  % restore LTR for English section 5.4 and ch06+
+
+% ---- Section 5.4 (English section — stays LTR) ---------------------------
 \section{Mixed-Language Example}
 
-The following sentence demonstrates inline mixing:
+The following sentence demonstrates inline mixing — an English sentence containing
+embedded Hebrew technical terms rendered correctly under
+\texttt{polyglossia}:
+
 \begin{hebrew}
-הסוכן מבצע \emph{ReAct loop} — לולאת Reason-Act שבה הסוכן מנתח, בוחר כלי (\emph{tool}),
-מבצע, ומשנה את מצבו בהתאם לתצפית (\emph{observation}).
+הסוכן מבצע \foreignlanguage{english}{\emph{ReAct loop}} —
+לולאת \foreignlanguage{english}{Reason-Act} שבה הסוכן מנתח,
+בוחר כלי (\foreignlanguage{english}{\emph{tool}}),
+מבצע, ומשנה את מצבו בהתאם לתצפית
+(\foreignlanguage{english}{\emph{observation}}).
 \end{hebrew}
 
 This bilingual capability is critical for Israeli academic submissions, where citations,
-technical terminology, and abstracts often mix Hebrew and English \parencite{Segal2026}.
+technical terminology, and abstracts often mix Hebrew and English~\parencite{Segal2026}.
