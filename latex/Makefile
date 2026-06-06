@@ -1,6 +1,10 @@
 # Makefile — LuaLaTeX 4-pass build with biber
 # Usage: cd latex && make
-# Requirements: lualatex, biber (TeXLive 2023+ recommended)
+# Requirements: lualatex + biber from TeXLive 2025 (GNU FreeFont for Hebrew BiDi)
+# On macOS with both 2025 and 2025basic installs, use the full 2025 install:
+TEXLIVE_BIN ?= /usr/local/texlive/2025/bin/universal-darwin
+LUALATEX    = $(TEXLIVE_BIN)/lualatex
+BIBER       = $(TEXLIVE_BIN)/biber
 
 MAIN        = main
 OUTPUT_DIR  = output
@@ -15,13 +19,13 @@ $(OUTPUT_DIR)/$(PDF_NAME): $(MAIN).tex bib/references.bib $(wildcard chapters/*.
                             $(wildcard figures/*) style/article.sty
 	@mkdir -p $(OUTPUT_DIR)
 	@echo "==> Pass 1: lualatex"
-	lualatex --output-directory=$(OUTPUT_DIR) --interaction=nonstopmode $(MAIN).tex
+	$(LUALATEX) --output-directory=$(OUTPUT_DIR) --interaction=nonstopmode $(MAIN).tex
 	@echo "==> Pass 2: biber"
-	biber --input-directory=$(OUTPUT_DIR) --output-directory=$(OUTPUT_DIR) $(MAIN)
+	$(BIBER) --input-directory=$(OUTPUT_DIR) --output-directory=$(OUTPUT_DIR) $(MAIN)
 	@echo "==> Pass 3: lualatex"
-	lualatex --output-directory=$(OUTPUT_DIR) --interaction=nonstopmode $(MAIN).tex
+	$(LUALATEX) --output-directory=$(OUTPUT_DIR) --interaction=nonstopmode $(MAIN).tex
 	@echo "==> Pass 4: lualatex"
-	lualatex --output-directory=$(OUTPUT_DIR) --interaction=nonstopmode $(MAIN).tex
+	$(LUALATEX) --output-directory=$(OUTPUT_DIR) --interaction=nonstopmode $(MAIN).tex
 	@cp $(OUTPUT_DIR)/$(MAIN).pdf $(OUTPUT_DIR)/$(PDF_NAME)
 	@echo "==> Done: $(OUTPUT_DIR)/$(PDF_NAME)"
 

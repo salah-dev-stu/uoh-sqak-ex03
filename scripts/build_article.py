@@ -1,4 +1,5 @@
 """Python wrapper for the 4-pass LuaLaTeX build (alternative to make)."""
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -7,6 +8,10 @@ LATEX_DIR = Path(__file__).parent.parent / "latex"
 OUTPUT_DIR = LATEX_DIR / "output"
 MAIN = "main"
 PDF_NAME = "uoh-sqak-article.pdf"
+# Use full TeXLive 2025 for Hebrew BiDi support (GNU FreeFont + luabidi)
+_TEXLIVE = Path("/usr/local/texlive/2025/bin/universal-darwin")
+LUALATEX = str(_TEXLIVE / "lualatex") if _TEXLIVE.exists() else "lualatex"
+BIBER = str(_TEXLIVE / "biber") if _TEXLIVE.exists() else "biber"
 
 
 def _run(cmd: list[str], cwd: Path) -> int:
@@ -19,13 +24,13 @@ def build() -> int:
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
     passes = [
-        (["lualatex", "--output-directory=output", "--interaction=nonstopmode", f"{MAIN}.tex"],
+        ([LUALATEX, "--output-directory=output", "--interaction=nonstopmode", f"{MAIN}.tex"],
          "Pass 1: lualatex"),
-        (["biber", "--input-directory=output", "--output-directory=output", MAIN],
+        ([BIBER, "--input-directory=output", "--output-directory=output", MAIN],
          "Pass 2: biber"),
-        (["lualatex", "--output-directory=output", "--interaction=nonstopmode", f"{MAIN}.tex"],
+        ([LUALATEX, "--output-directory=output", "--interaction=nonstopmode", f"{MAIN}.tex"],
          "Pass 3: lualatex"),
-        (["lualatex", "--output-directory=output", "--interaction=nonstopmode", f"{MAIN}.tex"],
+        ([LUALATEX, "--output-directory=output", "--interaction=nonstopmode", f"{MAIN}.tex"],
          "Pass 4: lualatex"),
     ]
 

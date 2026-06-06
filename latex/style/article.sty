@@ -5,12 +5,22 @@
 % Geometry
 \RequirePackage[a4paper, top=2.5cm, bottom=2.5cm, left=3cm, right=2.5cm]{geometry}
 
-% Fonts and encoding
+% Fonts and encoding (GNU FreeFont — full Unicode including Hebrew)
 \RequirePackage{fontspec}
 \setmainfont{FreeSerif}[
   BoldFont=FreeSerifBold,
   ItalicFont=FreeSerifItalic,
   BoldItalicFont=FreeSerifBoldItalic
+]
+\setsansfont{FreeSans}[
+  BoldFont=FreeSansBold,
+  ItalicFont=FreeSansOblique,
+  BoldItalicFont=FreeSansBoldOblique,
+]
+\setmonofont{FreeMono}[
+  BoldFont=FreeMonoBold,
+  ItalicFont=FreeMonoOblique,
+  BoldItalicFont=FreeMonoBoldOblique,
 ]
 
 % Language support (BiDi — Hebrew + English)
@@ -41,6 +51,7 @@
 
 % Headers and footers
 \RequirePackage{fancyhdr}
+\setlength{\headheight}{15pt}
 \pagestyle{fancy}
 \fancyhf{}
 \fancyhead[L]{\small\textcolor{uohgray}{Multi-Agent Orchestration Patterns}}
