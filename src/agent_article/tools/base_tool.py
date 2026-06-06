@@ -28,8 +28,8 @@ class BaseTool(ABC):
         name_ = self.name
         desc_ = self.description
 
-        @crewai_tool(name_, description=desc_)
         def _tool(*args: Any, **kwargs: Any) -> Any:
             return run_fn(*args, **kwargs)
 
-        return _tool
+        _tool.__doc__ = desc_
+        return crewai_tool(name_)(_tool)
