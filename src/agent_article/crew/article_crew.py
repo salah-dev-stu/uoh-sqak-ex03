@@ -12,7 +12,7 @@ from agent_article.shared.config import cfg
 from agent_article.shared.logging_fifo import StructuredLogger
 from agent_article.tasks.article_tasks import (
     build_edit_task,
-    build_latex_task,
+    build_latex_tasks,
     build_research_task,
     build_write_task,
 )
@@ -55,13 +55,15 @@ class ArticleCrew:
         t_research = build_research_task(researcher, self._topic)
         t_write = build_write_task(writer, self._topic, [t_research])
         t_edit = build_edit_task(editor, [t_write])
-        t_latex = build_latex_task(latex, [t_edit])
+        latex_tasks = build_latex_tasks(latex, [t_edit])
 
+        all_tasks = [t_research, t_write, t_edit, *latex_tasks]
         return Crew(
             agents=[researcher.build(), writer.build(), editor.build(), latex.build()],
-            tasks=[t_research, t_write, t_edit, t_latex],
+            tasks=all_tasks,
             process=Process.sequential,
             verbose=True,
+            respect_context_window=True,
         )
 
     def run(self) -> CrewResult:

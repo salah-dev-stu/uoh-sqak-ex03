@@ -23,8 +23,11 @@ class ClaudeCLILLM(BaseLLM):
     @model_validator(mode="before")
     @classmethod
     def _set_model_default(cls, data: Any) -> Any:
-        if isinstance(data, dict) and not data.get("model"):
-            data["model"] = _DEFAULT_MODEL
+        if isinstance(data, dict):
+            if not data.get("model"):
+                data["model"] = _DEFAULT_MODEL
+            if "temperature" not in data:
+                data["temperature"] = 0
         return data
 
     def call(self, messages: str | list[Any], tools: list | None = None, **kwargs: Any) -> str:
@@ -45,7 +48,18 @@ class ClaudeCLILLM(BaseLLM):
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=self.timeout)
         if result.returncode != 0:
             raise RuntimeError(f"claude CLI failed: {result.stderr[:500]}")
-        return result.stdout.strip()
+        output = result.stdout.strip()
+        # CrewAI injects "\nObservation:" as a stop sequence for the ReAct loop.
+        # claude -p runs to completion so we truncate manually so CrewAI can
+        # execute the real tool instead of the model's fabricated observation.
+        for stop_seq in (getattr(self, "stop", None) or []):
+            if stop_seq in output:
+                output = output[: output.index(stop_seq)]
+                break
+        return output
+
+    def supports_function_calling(self) -> bool:
+        return False
 
     def supports_stop_words(self) -> bool:
         return False

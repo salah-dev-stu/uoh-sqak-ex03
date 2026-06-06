@@ -1,56 +1,100 @@
-% Chapter 2: Agent Architectures
 \chapter{Agent Architectures and Topologies}
-\label{ch:arch}
+\label{ch:architectures}
 
-\section{Single-Agent Loop}
-
-The simplest architecture is the ReAct loop \parencite{Yao2022}: an agent receives a task,
-reasons about it, selects a tool action, observes the result, and repeats until the task is
-complete. This pattern underpins most LLM-based agents today.
-
-\section{Sequential Multi-Agent Pipeline}
-
-Sequential pipelines chain specialised agents where each agent's output becomes the next
-agent's input \parencite{CrewAI2024}. The pipeline used in this project follows this topology:
+Orchestration architectures differ primarily in how control and information flow between agents.
+Three canonical topologies cover most real deployments \cite{Segal2026}.
 
 \begin{figure}[H]
   \centering
-  \includegraphics[width=\textwidth]{figures/agent_topology.png}
-  \caption{Framework comparison scores (Python-generated chart)}
-  \label{fig:topology-chart}
+  \resizebox{\textwidth}{!}{\input{figures/crew_architecture.tikz}}
+  \caption{The \texttt{CrewAI} multi-agent architecture: an orchestrator dispatches tasks to
+           specialist workers, each equipped with domain-specific tools.}
+  \label{fig:crew_architecture}
 \end{figure}
 
-\section{Hierarchical Multi-Agent Networks}
+\section{Sequential Pipelines}
 
-Hierarchical architectures introduce a manager agent that decomposes goals and delegates to
-worker agents \parencite{AutoGen2023}. This enables dynamic task allocation but adds
-coordination overhead.
+\textbf{Sequential pipelines} pass a work artifact from one agent to the next in a fixed order.
+Each agent transforms the artifact and hands it forward. The pattern is simple to reason about
+and debug, but any single agent's failure blocks the entire chain \cite{LangGraph2024}.
 
-\section{Peer-to-Peer (Graph) Architectures}
+For a pipeline of $N$ agents with individual latencies $\ell_1, \ell_2, \ldots, \ell_N$, the
+total end-to-end latency satisfies
 
-LangGraph models agents as nodes in a directed graph with conditional edges \parencite{LangGraph2024}.
-Each node can route to any other node based on the current state, enabling loops, retries,
-and human-in-the-loop breakpoints.
+\begin{equation}
+  L_{\mathrm{seq}} = \sum_{i=1}^{N} \ell_i + (N - 1)\,\delta
+  \label{eq:seq_latency}
+\end{equation}
 
-\section{Comparative Summary}
+where $\delta$ denotes the artifact-transfer overhead between consecutive agents. The additive
+dependence on $N$ motivates shifting independent subtasks to parallel topologies whenever
+the task graph permits.
 
-\begin{longtable}{@{}llll@{}}
-\toprule
-\textbf{Topology} & \textbf{Coupling} & \textbf{Scalability} & \textbf{Complexity} \\
-\midrule
-\endfirsthead
-\multicolumn{4}{c}{\textit{(continued)}} \\
-\toprule
-\textbf{Topology} & \textbf{Coupling} & \textbf{Scalability} & \textbf{Complexity} \\
-\midrule
-\endhead
-\bottomrule
-\endfoot
-Single-agent loop  & N/A      & Low     & Low    \\
-Sequential pipeline & Tight   & Medium  & Medium \\
-Hierarchical       & Loose    & High    & High   \\
-Graph (LangGraph)  & Flexible & High    & High   \\
-\bottomrule
-\caption{Agent topology comparison}
-\label{tab:topology}
+\section{Hierarchical Manager--Worker Architectures}
+
+\textbf{Hierarchical (manager--worker) architectures} introduce an orchestrator agent that
+decomposes a goal into subtasks and dispatches them to worker agents. The orchestrator collects
+results, evaluates quality, and either accepts or re-dispatches \cite{CrewAI2024}. This mirrors
+how human organisations delegate work; both CrewAI and AutoGen implement this pattern as a
+first-class construct \cite{AutoGen2023}.
+
+\section{Peer-to-Peer Meshes}
+
+\textbf{Peer-to-peer meshes} allow agents to call one another directly without a central
+co-ordinator. Emergent behaviour is possible, but observability and deadlock prevention become
+significant engineering challenges. The absence of a single control point makes formal
+verification of liveness properties considerably harder.
+
+\section{Hybrid Orchestrators}
+
+A hybrid approach---a thin orchestrator managing loosely coupled specialist agents---balances
+control with flexibility and is the dominant pattern in production systems today
+\cite{LangGraph2024}. The orchestrator retains global state and task-routing logic while each
+worker operates independently, enabling partial retries without replaying the full pipeline.
+
+\section{Topology Comparison}
+
+Table~\ref{tab:topologies} summarises the key trade-offs across the four principal topologies.
+
+\begin{longtable}{@{}lllll@{}}
+  \caption{Comparison of multi-agent orchestration topologies.}
+  \label{tab:topologies}\\
+  \toprule
+  \textbf{Architecture} & \textbf{Control} & \textbf{Parallelism} &
+  \textbf{Failure Blast Radius} & \textbf{Observability} \\
+  \midrule
+  \endfirsthead
+  \multicolumn{5}{c}{\tablename\ \thetable{} -- \textit{continued}}\\
+  \toprule
+  \textbf{Architecture} & \textbf{Control} & \textbf{Parallelism} &
+  \textbf{Failure Blast Radius} & \textbf{Observability} \\
+  \midrule
+  \endhead
+  \midrule
+  \multicolumn{5}{r}{\textit{continued on next page}}\\
+  \endfoot
+  \bottomrule
+  \endlastfoot
+  Sequential Pipeline   & Implicit / order  & Low    & High (blocks chain)   & Easy   \\
+  Hierarchical Manager  & Centralised       & Medium & Contained per subtask & Medium \\
+  Peer-to-Peer Mesh     & Distributed       & High   & Unpredictable         & Hard   \\
+  Hybrid Orchestrator   & Semi-centralised  & High   & Scoped                & Good   \\
 \end{longtable}
+
+\section{Cost and Topology Selection}
+
+Choosing a topology is an early architectural decision with long-term consequences for
+testability, latency, and cost. The expected inference cost $C$ of a manager--worker pipeline
+with $K$ parallel workers is
+
+\begin{equation}
+  C = \sum_{k=1}^{K}\!\bigl(c_{\mathrm{in}}\,t_{k}^{\mathrm{in}}
+      + c_{\mathrm{out}}\,t_{k}^{\mathrm{out}}\bigr) + C_{\mathrm{orch}}
+  \label{eq:cost_model}
+\end{equation}
+
+where $c_{\mathrm{in}}$ and $c_{\mathrm{out}}$ are the per-token input and output prices,
+$t_{k}^{\mathrm{in}}$ and $t_{k}^{\mathrm{out}}$ are the token counts for worker~$k$, and
+$C_{\mathrm{orch}}$ is the orchestrator's own inference cost \cite{Segal2026}. Minimising $C$
+under a quality constraint is the central optimisation problem of production multi-agent
+engineering.

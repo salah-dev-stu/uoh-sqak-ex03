@@ -67,18 +67,43 @@ def build_edit_task(agent: "BaseAgent", context: list[Task]) -> Task:
     )
 
 
-def build_latex_task(agent: "BaseAgent", context: list[Task]) -> Task:
+# Per-chapter LaTeX conversion tasks — each has output_file so CrewAI writes
+# the agent's Final Answer directly to disk without needing a tool call.
+_LATEX_CHAPTERS = [
+    ("latex_ch01", "latex/chapters/ch01_introduction.tex"),
+    ("latex_ch02", "latex/chapters/ch02_architectures.tex"),
+    ("latex_ch03", "latex/chapters/ch03_frameworks.tex"),
+    ("latex_ch04", "latex/chapters/ch04_production.tex"),
+    ("latex_ch05", "latex/chapters/ch05_bidi.tex"),
+    ("latex_ch06", "latex/chapters/ch06_casestudy.tex"),
+    ("latex_bib",  "latex/bib/references.bib"),
+]
+
+
+def build_latex_tasks(agent: "BaseAgent", context: list[Task]) -> list[Task]:
     """
     Input:  edit task context (6 edited chapters)
-    Output: Task compiling latex/output/uoh-sqak-article.pdf
-    Setup:  config/tasks.json::latex
+    Output: list[Task] — one per chapter + bibliography, each with output_file
+    Setup:  config/tasks.json::latex_ch01..latex_bib
     """
-    desc = _task_cfg("latex", "description")
-    expected = _task_cfg("latex", "expected_output")
-    _log.info("Building latex task")
-    return Task(
-        description=desc,
-        expected_output=expected,
-        agent=agent.build(),
-        context=context,
-    )
+    tasks: list[Task] = []
+    agent_obj = agent.build()
+    for cfg_key, output_path in _LATEX_CHAPTERS:
+        desc = _task_cfg(cfg_key, "description")
+        expected = _task_cfg(cfg_key, "expected_output")
+        _log.info(f"Building latex task key={cfg_key!r} output={output_path!r}")
+        task = Task(
+            description=desc,
+            expected_output=expected,
+            agent=agent_obj,
+            context=context if not tasks else [tasks[-1]],
+            output_file=output_path,
+        )
+        tasks.append(task)
+    return tasks
+
+
+# Keep old name as alias so any external callers don't break immediately.
+def build_latex_task(agent: "BaseAgent", context: list[Task]) -> Task:
+    """Deprecated — use build_latex_tasks() which returns a list."""
+    return build_latex_tasks(agent, context)[0]

@@ -1,75 +1,208 @@
-% Chapter 4: Production Patterns
 \chapter{Production Patterns and Challenges}
 \label{ch:production}
 
-\section{Rate Limiting and Token Budgets}
+Deploying multi-agent systems in production introduces challenges that do not exist in
+single-model deployments. Token costs, latency, observability, and failure recovery all
+scale with the number of agents \cite{Segal2026}. This chapter catalogues the principal
+engineering controls that separate a research prototype from a production-grade orchestration
+system.
 
-Production deployments must respect API rate limits to avoid throttling. A common pattern
-is the token-bucket algorithm \parencite{Turner1986}, which allows burst traffic up to a
-configured capacity $C$ while maintaining average rate $\lambda$:
+\section{Token Economy}
+
+\textbf{Token economy} is the first concern in any multi-agent deployment. Each agent
+invocation consumes prompt tokens (context, conversation history, and tool schemas) plus
+completion tokens. For a sequential pipeline of $N$ agents, the total inference cost
+$C_{\mathrm{total}}$ is
 
 \begin{equation}
-  \text{tokens}(t) = \min\!\left(C,\; \text{tokens}(t-\Delta t) + \lambda \cdot \Delta t\right)
+  C_{\mathrm{total}} = \sum_{i=1}^{N}\!\Bigl(
+    c_{\mathrm{in}}\,t_{i}^{\mathrm{in}} + c_{\mathrm{out}}\,t_{i}^{\mathrm{out}}
+  \Bigr)
+  \label{eq:total_cost}
+\end{equation}
+
+where $c_{\mathrm{in}}$ and $c_{\mathrm{out}}$ are the per-token input and output prices
+(in USD per million tokens), and $t_{i}^{\mathrm{in}}$, $t_{i}^{\mathrm{out}}$ are the
+prompt and completion token counts consumed by agent~$i$ \cite{Segal2026}.
+
+Budget controls must be enforced at the orchestration layer---not inside individual
+agents---so that a runaway research loop cannot exhaust a monthly quota in a single run.
+Rate limits, retry budgets, and per-task token ceilings belong in configuration files,
+never in source code.
+
+\subsection{Token-Bucket Rate Limiting}
+
+A common production pattern is the \emph{token-bucket algorithm} \cite{Turner1986}, which
+allows burst traffic up to a configured capacity $C$ while maintaining average rate
+$\lambda$:
+
+\begin{equation}
+  \mathrm{tokens}(t) = \min\!\left(
+    C,\;\mathrm{tokens}(t - \Delta t) + \lambda\,\Delta t
+  \right)
   \label{eq:token-bucket}
 \end{equation}
 
 In the \texttt{ApiGatekeeper} implementation, the token bucket enforces per-service limits
-read from \texttt{config/rate\_limits.json}, ensuring zero hardcoded values in source code.
+read from \texttt{config/rate\_limits.json}, ensuring zero hardcoded values in source
+code.
+
+\subsection{Budget Utilisation}
+
+To monitor budget health across a billing cycle, the orchestrator tracks utilisation $U$
+as the fraction of the monthly ceiling $B_{\max}$ consumed across all completed runs $R$:
+
+\begin{equation}
+  U = \frac{\displaystyle\sum_{r=1}^{R} C_{\mathrm{total}}^{(r)}}{B_{\max}}
+  \label{eq:budget_util}
+\end{equation}
+
+A circuit-breaker fires when $U > \theta$ for a configurable threshold
+$\theta \in (0,\,1]$, suspending new crew invocations until the billing cycle resets
+\cite{Segal2026}.
 
 \section{Observability and Structured Logging}
 
-Agent-based systems require rich observability. Each event should be logged as a structured
-JSONL record containing at minimum: \texttt{timestamp}, \texttt{component}, \texttt{level},
-\texttt{message}, and task-specific metadata.
+\textbf{Observability} requires structured logging at every agent boundary: task
+identifier, agent identifier, model used, prompt hash, token counts, latency, and outcome.
+Distributed traces via OpenTelemetry allow debugging multi-hop failures without replaying
+the full crew \cite{LangGraph2024}.
 
-The FIFO log rotation scheme constrains disk usage to $N \times M$ lines where $N$ is the
-number of log files and $M$ is the maximum lines per file:
+The FIFO log-rotation scheme constrains disk usage to $N \times M$ lines, where $N$ is
+the number of rolling log files and $M$ is the maximum lines per file:
 
 \begin{equation}
-  \text{MaxDisk}(N, M) = N \cdot M \cdot \bar{b}
+  \mathrm{MaxDisk}(N, M) = N \cdot M \cdot \bar{b}
   \label{eq:fifo-disk}
 \end{equation}
 
-where $\bar{b}$ is the average bytes per log line.
+where $\bar{b}$ is the average bytes per log line \cite{Segal2026}.
 
-\section{Fault Tolerance and Retries}
+\subsection{End-to-End Pipeline Latency}
 
-Network calls to LLMs can fail transiently. The Gatekeeper wraps all calls with exponential
-backoff, retrying up to $k$ times with delay $d_i = d_0 \cdot 2^i + \epsilon$:
+End-to-end pipeline latency $L_{\mathrm{pipe}}$ for a sequential crew of $N$ agents is
+bounded by the sum of per-agent LLM latencies plus inter-agent serialisation overhead
+$\delta$:
 
 \begin{equation}
-  d_i = d_0 \cdot 2^i + \epsilon, \quad i \in \{0, 1, \ldots, k-1\}
+  L_{\mathrm{pipe}} = \sum_{i=1}^{N} L_i + (N - 1)\,\delta
+  \label{eq:pipeline_latency}
+\end{equation}
+
+where $L_i$ is the wall-clock latency of agent~$i$'s inference call and $\delta$ is the
+average context-passing overhead between consecutive agents \cite{Segal2026}.
+
+\section{Fault Tolerance and Failure Modes}
+
+\textbf{Failure modes} unique to multi-agent systems include:
+
+\begin{itemize}
+  \item \textbf{Context drift} --- an agent inherits a corrupted upstream artifact,
+        causing downstream agents to amplify the error monotonically.
+  \item \textbf{Hallucinated tool calls} --- an agent invents tool arguments or fabricates
+        API responses that were never executed.
+  \item \textbf{Circular delegation loops} --- two or more agents repeatedly hand off the
+        same task without resolution, consuming tokens without progress.
+\end{itemize}
+
+A \textbf{Gatekeeper} class that validates all LLM outputs before they advance downstream
+catches the majority of these failure modes at low overhead \cite{Segal2026}.
+
+\subsection{Exponential Backoff}
+
+Network calls to LLMs can fail transiently. The Gatekeeper wraps all external calls with
+exponential backoff, retrying up to $k_{\max}$ times. The delay before the $i$-th retry
+is
+
+\begin{equation}
+  d_i = d_0 \cdot 2^{i} + \epsilon, \qquad i \in \{0,\,1,\,\ldots,\,k_{\max}-1\}
   \label{eq:backoff}
 \end{equation}
 
-\section{Human-in-the-Loop Checkpoints}
+where $d_0$ is the base delay in seconds and $\epsilon \sim \mathcal{U}(0,\,d_0)$ is a
+uniform jitter term that prevents thundering-herd collisions \cite{Segal2026}.
 
-Between the Editor and LaTeX Producer agents, the SDK exposes an approval gate
-(\texttt{SDK.approve\_markdown()}). This allows a human reviewer to inspect the edited
-Markdown before committing to the expensive LaTeX compilation pass \parencite{Segal2026}.
+\subsection{Retry Success Probability}
+
+Given a per-attempt success probability $p$, the probability of task completion within
+$k$ independent attempts is
+
+\begin{equation}
+  P(\text{success} \leq k) = 1 - (1 - p)^{k}, \qquad k \leq k_{\max}
+  \label{eq:retry_success}
+\end{equation}
+
+Setting $k_{\max} = \left\lceil \log(1 - p_{\mathrm{target}}) / \log(1 - p)
+\right\rceil$ guarantees a minimum target reliability $p_{\mathrm{target}}$ \cite{Segal2026}.
+
+\section{Idempotency}
+
+\textbf{Idempotency} in tool calls---especially file writes and external API
+mutations---prevents duplicate side effects when agents are retried after transient
+failures. Every mutating tool call is guarded by an idempotency key derived from a
+cryptographic hash of the task identifier, the tool name, and the call arguments:
+
+\begin{equation}
+  k_{\mathrm{idem}} = \mathrm{SHA256}\!\left(
+    \mathrm{task\_id} \;\big\|\; \mathrm{tool\_name} \;\big\|\; \mathrm{args}
+  \right) \bmod 2^{64}
+  \label{eq:idem_key}
+\end{equation}
+
+The Gatekeeper stores executed keys in a persistent set; any call whose key is already
+present returns the cached result without re-executing the side effect \cite{Segal2026}.
 
 \section{Versioning Strategy}
 
 Every component tracks a version string starting at \texttt{1.00} and incremented by
-\texttt{0.01} per change. The invariant is:
+\texttt{0.01} per change. The version invariant enforced by the CI pipeline is
 
 \begin{equation}
-  v_{\text{new}} = v_{\text{old}} + 0.01
+  v_{\mathrm{new}} = v_{\mathrm{old}} + 0.01
   \label{eq:version}
 \end{equation}
 
-This simple scheme ensures graders can audit change history without parsing commit messages.
+This simple monotonic scheme ensures auditors can correlate git commits to component
+behaviour without parsing free-form commit messages.
 
-\section{Pipeline Cost Model}
+\section{Human-in-the-Loop Checkpoints}
 
-The total cost of running $N$ agents is the sum of per-agent token costs:
+Between the Editor and \LaTeX{} Producer agents, the SDK exposes an approval gate
+(\texttt{SDK.approve\_markdown()}). This allows a human reviewer to inspect the edited
+Markdown before committing to the expensive \LaTeX{} compilation pass \cite{Segal2026}.
+The gate is configurable: in fully automated CI runs it is bypassed; in interactive
+sessions it blocks until the user responds.
 
-\begin{equation}
-  C_{\text{total}} = \sum_{i=1}^{N}
-    \bigl( p_{\text{in}} \cdot T_i^{\text{prompt}} + p_{\text{out}} \cdot T_i^{\text{completion}} \bigr)
-  \label{eq:cost}
-\end{equation}
+\section{Production Readiness Checklist}
 
-where $p_{\text{in}}$ and $p_{\text{out}}$ are the input and output price per token, and
-$T_i^{\text{prompt}}$, $T_i^{\text{completion}}$ are the token counts for agent $i$.
-This formula drives the \texttt{ApiGatekeeper} spend report returned by \texttt{SDK.spend\_report()}.
+Table~\ref{tab:prod_checklist} summarises the minimum engineering controls required
+before promoting a multi-agent orchestration system to production.
+
+\begin{longtable}{lll}
+  \caption{Production readiness checklist for multi-agent orchestration systems.}
+  \label{tab:prod_checklist}\\
+  \toprule
+  \textbf{Control} & \textbf{Mechanism} & \textbf{Owner} \\
+  \midrule
+  \endfirsthead
+  \multicolumn{3}{c}{\tablename\ \thetable{} -- \textit{continued}}\\
+  \toprule
+  \textbf{Control} & \textbf{Mechanism} & \textbf{Owner} \\
+  \midrule
+  \endhead
+  \midrule
+  \multicolumn{3}{r}{\textit{continued on next page}}\\
+  \endfoot
+  \bottomrule
+  \endlastfoot
+  Token budget enforcement  & Rate-limit config + circuit-breaker             & Orchestrator \\
+  Per-token spend reporting & \texttt{SDK.spend\_report()} JSONL audit         & SDK layer    \\
+  Structured logging        & JSON logs + OpenTelemetry traces                 & Gatekeeper   \\
+  Output validation         & Pydantic schema + regex guards                  & Gatekeeper   \\
+  Retry budget              & Configurable $k_{\max}$ per task                & Orchestrator \\
+  Idempotency               & SHA-256 key store, persistent across restarts   & Tool layer   \\
+  Human-in-the-loop gate    & \texttt{SDK.approve\_markdown()} blocking call  & SDK layer    \\
+  Secret management         & \texttt{.env} + \texttt{os.environ.get(\ldots)} & Config layer \\
+  Regression test suite     & \texttt{pytest --cov} $\geq 85\%$              & CI pipeline  \\
+  Versioning                & Monotonic \texttt{v += 0.01} enforced by CI     & All modules  \\
+\end{longtable}

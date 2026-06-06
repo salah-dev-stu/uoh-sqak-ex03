@@ -4,14 +4,14 @@
 % KEY RULES for LuaLaTeX + polyglossia (luabidi):
 %   1. \chapter{\texthebrew{...}} — fixes character reversal in title + TOC entry
 %   2. \hebrewheadingformat → right-aligns chapter and HEBREW section headings
-%   3. \defaultheadingformat → restores LTR BEFORE the English section 5.4
+%   3. \defaultheadingformat → restores LTR BEFORE the English section 5.5
 %   4. Body paragraphs in \begin{hebrew}...\end{hebrew}
 %   5. English terms inside Hebrew blocks MUST use \foreignlanguage{english}{...}
 %      otherwise luabidi reverses individual characters (LuaLaTeX → XeTaLauL)
-%   6. \addtocontents{toc}{...} injects Hebrew TOC styles (number left, dots, title right)
+%   6. \addtocontents{toc}{...} injects Hebrew TOC styles (page-left, dots, title-right)
 
-% Inject Hebrew TOC style into .toc file — takes effect during \tableofcontents (pass 2+)
-% Layout for Hebrew entries: number [1em] [dotfill] [1em] title [1em] page
+% Inject Hebrew RTL TOC style into .toc file — takes effect during \tableofcontents (pass 2+)
+% Layout: page [left] · dots · title [right] · chapter-number [far-right]
 \addtocontents{toc}{%
   \protect\etocsetstyle{chapter}{}{}%
   {\protect\addvspace{1.0em plus 1pt}%
@@ -32,11 +32,15 @@
 \label{ch:bidi}
 
 % ---- Section 5.1 --------------------------------------------------------
-% \mbox{\setLTR...} is opaque to BiDi — prevents EN from being absorbed into RTL run
 \section[\texthebrew{מבוא לתיאום רב-לשוני}]{\texthebrew{מבוא לתיאום רב-לשוני}\mbox{\setLTR\enspace\thesection}}
 
 \begin{hebrew}
-מערכות רב-סוכניות מודרניות נדרשות לתמוך בשפות מרובות, ובמיוחד בטקסט דו-כיווני
+תחום אורקסטרציה של סוכני בינה מלאכותית מתפתח במהירות רבה.
+במערכות מודרניות, כל סוכן מתמחה במשימה ספציפית: חיפוש מידע, כתיבה יצירתית,
+עריכה לשונית, או קומפילציה של מסמכים.
+השיתוף פעולה בין הסוכנים מאפשר לייצר פלט איכותי שסוכן בודד לא היה מסוגל להשיג לבדו.
+
+מערכות אלו נדרשות לתמוך בשפות מרובות, ובמיוחד בטקסט דו-כיווני
 (\foreignlanguage{english}{BiDi}).
 שפת עברית נכתבת מימין לשמאל (\foreignlanguage{english}{RTL}), בעוד שמונחים
 טכניים באנגלית מוטמעים בתוך הטקסט בכיוון שמאל-לימין (\foreignlanguage{english}{LTR}).
@@ -70,6 +74,11 @@
         ומריץ ארבעה מעברי קומפילציה עם
         \foreignlanguage{english}{\texttt{biber}}.
 \end{enumerate}
+
+אחד האתגרים המרכזיים הוא ניהול ההקשר המשותף.
+כאשר סוכן אחד מעביר מידע לסוכן הבא, יש לוודא שהמידע מדויק, מובנה ורלוונטי.
+מנגנוני ה-\foreignlanguage{english}{Gatekeeper} וה-\foreignlanguage{english}{Watchdog}
+מספקים שכבת אמינות נוספת, ומבטיחים שרק פלטים העומדים בסטנדרטים הנדרשים יעברו הלאה בצינור.
 \end{hebrew}
 
 % ---- Section 5.3 --------------------------------------------------------
@@ -92,21 +101,53 @@
 \foreignlanguage{english}{Unicode} מלא לעברית ולאנגלית ללא צורך בהתאמות מיוחדות.
 הגדרת \foreignlanguage{english}{\texttt{hebrewfont}} ב-%
 \foreignlanguage{english}{\texttt{article.sty}} מאפשרת מעבר חלק בין שפות.
+
+\textbf{עלות טוקנים דו-לשוניים:}
+עיבוד טקסט עברי-אנגלי מעורב גורר עלות טוקנים גבוהה יותר,
+מכיוון שהמודל חייב לקודד שתי מערכות כתיבה.
+שיטת
+\foreignlanguage{english}{\texttt{BPE}}
+(\foreignlanguage{english}{Byte-Pair Encoding})
+יוצרת אסימוני-משנה (\foreignlanguage{english}{sub-tokens})
+קצרים יותר לעברית, ולכן כל מילה עברית צורכת בממוצע
+\foreignlanguage{english}{2–3} טוקנים לעומת
+\foreignlanguage{english}{1–1.5} לאנגלית.
 \end{hebrew}
 
-% Restore standard LaTeX TOC style before the English section.
-% \etocstandardlines restores the report class's native \l@chapter/\l@section format
-% (number left · dots · title · page right). \etocdefaultlines would give etoc's own
-% default which shows "5.4, p. 10" format — wrong for LTR sections.
-\addtocontents{toc}{\protect\etocstandardlines}
-\defaultheadingformat  % restore LTR for English section 5.4 and ch06+
+% ---- Section 5.4 — Hebrew conclusions (from source markdown) ----------------
+\section[\texthebrew{מסקנות ותובנות}]{\texthebrew{מסקנות ותובנות}\mbox{\setLTR\enspace\thesection}}
 
-% ---- Section 5.4 (English section — stays LTR) ---------------------------
+\begin{hebrew}
+לסיכום, הצלחה במערכות רב-סוכניות תלויה לא רק בבחירת המסגרת הנכונה,
+אלא גם בתכנון אדריכלי קפדני, בתיעוד מלא של כל רכיב,
+ובבדיקות אוטומטיות שמכסות את כל נקודות החיבור בין הסוכנים.
+מערכת שנבנית נכון מלכתחילה היא מערכת שניתן לתחזק, להרחיב ולסמוך עליה לאורך זמן.
+
+השיקול הלשוני — תמיכה בעברית ובאנגלית בו-זמנית — אינו תוספת נוחות אלא
+\textbf{דרישת ליבה} בכל מערכת שמיועדת לשוק הישראלי.
+אי-תשומת לב לתנאי
+\foreignlanguage{english}{BiDi}
+עלולה לגרום לכשלים חמורים: הצגת טקסט הפוך, שגיאות בנוסחאות מתמטיות,
+ו"בלבול" של הסוכן בין כיוון הטקסט ובין תוכנו.
+\end{hebrew}
+
+% Restore standard LaTeX TOC style before the English sections.
+% \etocstandardlines restores the report class's native \l@chapter/\l@section format
+% (number left · dots · title · page right).
+\addtocontents{toc}{\protect\etocstandardlines}
+\defaultheadingformat  % restore LTR for English sections 5.5–5.6 and ch06+
+
+% ---- Section 5.5 (English section — stays LTR) ---------------------------
 \section{Mixed-Language Example}
 
-The following sentence demonstrates inline mixing — an English sentence containing
-embedded Hebrew technical terms rendered correctly under
-\texttt{polyglossia}:
+The bilingual nature of production systems --- particularly those targeting
+Hebrew-language document generation --- highlights a deeper engineering truth:
+\textbf{language is a first-class concern in agent design}.
+Prompt templates, tool schemas, and output validators must all be aware of script
+direction, character encoding (\texttt{UTF-8}), and BiDi rendering rules.
+
+The following sentence demonstrates inline mixing --- an English sentence containing
+embedded Hebrew technical terms rendered correctly under \texttt{polyglossia}:
 
 \begin{hebrew}
 הסוכן מבצע \foreignlanguage{english}{\emph{ReAct loop}} —
@@ -117,4 +158,37 @@ embedded Hebrew technical terms rendered correctly under
 \end{hebrew}
 
 This bilingual capability is critical for Israeli academic submissions, where citations,
-technical terminology, and abstracts often mix Hebrew and English~\parencite{Segal2026}.
+technical terminology, and abstracts often mix Hebrew and
+English~\parencite{Segal2026}.
+
+% ---- Section 5.6 — Token cost of bilingual processing (formula required) ---
+\section{Token Economics of Bilingual Processing}
+
+Hebrew text incurs higher tokenisation overhead than English because
+\texttt{BPE}-based tokenisers generate shorter sub-tokens for non-Latin scripts.
+Let $\tau_{\mathrm{he}}$ be the average tokens per Hebrew word and
+$\tau_{\mathrm{en}}$ the average tokens per English word.
+For a bilingual document of $W_{\mathrm{he}}$ Hebrew words and $W_{\mathrm{en}}$
+English words, the total token count $T$ is
+
+\begin{equation}
+  T = \tau_{\mathrm{he}}\,W_{\mathrm{he}} + \tau_{\mathrm{en}}\,W_{\mathrm{en}}
+  \label{eq:bidi_tokens}
+\end{equation}
+
+Empirically, $\tau_{\mathrm{he}} \approx 2.4$ and $\tau_{\mathrm{en}} \approx 1.3$
+for \texttt{claude-3} tokenisers \parencite{Segal2026}.
+The \emph{bilingual overhead ratio} $\rho$ measures how much more expensive a
+fully-Hebrew document is compared to an equivalent English document of the same
+word count $W$:
+
+\begin{equation}
+  \rho = \frac{\tau_{\mathrm{he}}\,W}{\tau_{\mathrm{en}}\,W}
+       = \frac{\tau_{\mathrm{he}}}{\tau_{\mathrm{en}}}
+       \approx \frac{2.4}{1.3} \approx 1.85
+  \label{eq:bidi_ratio}
+\end{equation}
+
+This ratio implies that an agent pipeline producing a 15-page Hebrew article consumes
+approximately 85\% more tokens than an equivalent English pipeline, and must be
+accounted for in token-budget configuration files~\parencite{Segal2026}.
