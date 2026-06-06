@@ -1,0 +1,76 @@
+% Custom style for uoh-sqak HW3 article
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{article}[2026/06/06 uoh-sqak article style]
+
+% Geometry
+\RequirePackage[a4paper, top=2.5cm, bottom=2.5cm, left=3cm, right=2.5cm]{geometry}
+
+% Fonts and encoding
+\RequirePackage{fontspec}
+\setmainfont{FreeSerif}[
+  BoldFont=FreeSerifBold,
+  ItalicFont=FreeSerifItalic,
+  BoldItalicFont=FreeSerifBoldItalic
+]
+
+% Language support (BiDi — Hebrew + English)
+\RequirePackage{polyglossia}
+\setmainlanguage{english}
+\setotherlanguage{hebrew}
+\newfontfamily\hebrewfont[Script=Hebrew]{FreeSerif}
+
+% Math
+\RequirePackage{amsmath, amssymb, amsthm}
+\RequirePackage{mathtools}
+
+% Graphics and figures
+\RequirePackage{graphicx}
+\RequirePackage{float}
+\RequirePackage{tikz}
+\usetikzlibrary{shapes.geometric, arrows.meta, positioning, fit, backgrounds}
+
+% Tables
+\RequirePackage{booktabs}
+\RequirePackage{longtable}
+\RequirePackage{tabularx}
+
+% Colors
+\RequirePackage{xcolor}
+\definecolor{uohblue}{RGB}{0, 64, 128}
+\definecolor{uohgray}{RGB}{100, 100, 100}
+
+% Headers and footers
+\RequirePackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\textcolor{uohgray}{Multi-Agent Orchestration Patterns}}
+\fancyhead[R]{\small\textcolor{uohgray}{Salah Qadah \& Andalus Kalash}}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+% Bibliography (biblatex + biber)
+\RequirePackage[backend=biber, style=authoryear, sorting=nyt, hyperref=true]{biblatex}
+\addbibresource{bib/references.bib}
+
+% Hyperlinks
+\RequirePackage[colorlinks=true, linkcolor=uohblue, citecolor=uohblue, urlcolor=uohblue]{hyperref}
+
+% Listings / code
+\RequirePackage{listings}
+\lstset{
+  basicstyle=\ttfamily\small,
+  breaklines=true,
+  frame=single,
+  numbers=left,
+  numberstyle=\tiny\color{uohgray},
+}
+
+% Chapter/section formatting
+\RequirePackage{titlesec}
+\titleformat{\chapter}[display]
+  {\normalfont\LARGE\bfseries\color{uohblue}}
+  {\chaptertitlename\ \thechapter}{12pt}{\LARGE}
+
+% Table of contents depth
+\setcounter{tocdepth}{2}
+\setcounter{secnumdepth}{2}

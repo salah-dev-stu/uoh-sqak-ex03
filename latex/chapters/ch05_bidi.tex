@@ -1,0 +1,57 @@
+% Chapter 5: BiDi — Hebrew + English
+\chapter{דו-כיווניות: עברית ואנגלית במערכות סוכנים}
+\label{ch:bidi}
+
+% Note: this chapter demonstrates BiDi (Hebrew↔English) per rule H8
+% Hebrew paragraphs use \begin{hebrew}...\end{hebrew} (polyglossia)
+
+\section{מבוא לתיאום רב-לשוני}
+
+\begin{hebrew}
+מערכות רב-סוכניות מודרניות נדרשות לתמוך בשפות מרובות, ובמיוחד בטקסט דו-כיווני (BiDi).
+שפת עברית נכתבת מימין לשמאל (RTL), בעוד שמונחים טכניים באנגלית מוטמעים בתוך הטקסט
+בכיוון שמאל-לימין (LTR). מנוע \texttt{LuaLaTeX} יחד עם חבילת \texttt{polyglossia}
+מספקים פתרון מלא לבעיה זו.
+\end{hebrew}
+
+\section{אדריכלות מערכת הסוכנים}
+
+\begin{hebrew}
+הצוות שיצר מאמר זה מורכב מארבעה סוכנים המסודרים בצינור עיבוד רציף:
+\begin{enumerate}
+  \item \textbf{סוכן המחקר} (ResearcherAgent) — אוסף מידע ממקורות אינטרנטיים באמצעות
+        כלי DuckDuckGo ומייצר קובץ הערות מחקר מובנה.
+  \item \textbf{סוכן הכתיבה} (WriterAgent) — ממיר את הערות המחקר לפרקים מובנים
+        בפורמט Markdown, כולל פרק זה הכתוב בעברית.
+  \item \textbf{סוכן העריכה} (EditorAgent) — עורך ומשכלל את הפרקים, מוודא עקביות
+        במינוח ובציטוטים.
+  \item \textbf{סוכן ה-LaTeX} (LaTeXAgent) — ממיר את הפרקים הערוכים לפורמט LaTeX
+        ומריץ ארבעה מעברי קומפילציה עם \texttt{biber}.
+\end{enumerate}
+\end{hebrew}
+
+\section{אתגרי BiDi בייצור}
+
+\begin{hebrew}
+הטמעת טקסט עברי בתוך מסמך מדעי-טכני מציבה מספר אתגרים:
+
+\textbf{ניהול ניקוד ופיסוק:}
+מספרים ולוגיקה פורמלית (כגון משוואות) חייבים להיות מוצגים בכיוון LTR אפילו בתוך
+פסקת RTL. חבילת \texttt{amsmath} עובדת כראוי עם \texttt{polyglossia} כאשר הסביבות
+\texttt{equation} ו-\texttt{align} מוגדרות כ-LTR אוטומטית.
+
+\textbf{גופנים:}
+שימוש ב-\texttt{FreeSerif} מספק כיסוי Unicode מלא לעברית ולאנגלית ללא צורך בהתאמות
+מיוחדות. הגדרת \texttt{hebrewfont} ב-\texttt{article.sty} מאפשרת מעבר חלק בין שפות.
+\end{hebrew}
+
+\section{Mixed-Language Example}
+
+The following sentence demonstrates inline mixing:
+\begin{hebrew}
+הסוכן מבצע \emph{ReAct loop} — לולאת Reason-Act שבה הסוכן מנתח, בוחר כלי (\emph{tool}),
+מבצע, ומשנה את מצבו בהתאם לתצפית (\emph{observation}).
+\end{hebrew}
+
+This bilingual capability is critical for Israeli academic submissions, where citations,
+technical terminology, and abstracts often mix Hebrew and English \parencite{Segal2026}.

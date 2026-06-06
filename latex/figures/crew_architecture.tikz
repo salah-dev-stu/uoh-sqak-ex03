@@ -1,0 +1,44 @@
+% TikZ block diagram of the CrewAI sequential pipeline
+% Included via \input{figures/crew_architecture.tikz}
+\begin{tikzpicture}[
+  node distance=1.6cm and 2.4cm,
+  agent/.style={rectangle, rounded corners=4pt, draw=uohblue, fill=uohblue!10,
+                minimum width=2.8cm, minimum height=1.0cm, align=center,
+                font=\small\bfseries},
+  tool/.style={rectangle, draw=gray!70, fill=gray!10,
+               minimum width=2.2cm, minimum height=0.7cm, align=center,
+               font=\scriptsize},
+  arrow/.style={-Latex, thick, color=uohblue},
+  darrow/.style={-Latex, dashed, color=gray},
+]
+
+% Agents
+\node[agent] (researcher) {Researcher\\Agent};
+\node[agent, right=of researcher] (writer) {Writer\\Agent};
+\node[agent, right=of writer] (editor) {Editor\\Agent};
+\node[agent, right=of editor] (latex) {LaTeX\\Agent};
+
+% Pipeline arrows
+\draw[arrow] (researcher) -- (writer);
+\draw[arrow] (writer) -- (editor);
+\draw[arrow] (editor) -- node[above, font=\tiny, color=gray]{approve?} (latex);
+
+% Tools below each agent
+\node[tool, below=0.8cm of researcher] (t1) {WebSearchTool\\FileWriteTool};
+\node[tool, below=0.8cm of writer]    (t2) {FileReadTool\\FileWriteTool};
+\node[tool, below=0.8cm of editor]    (t3) {FileReadTool\\FileWriteTool};
+\node[tool, below=0.8cm of latex]     (t4) {ChartGen\\LaTeXCompile};
+
+\draw[darrow] (researcher) -- (t1);
+\draw[darrow] (writer) -- (t2);
+\draw[darrow] (editor) -- (t3);
+\draw[darrow] (latex) -- (t4);
+
+% SDK + Gatekeeper box
+\begin{scope}[on background layer]
+  \node[draw=orange!60, fill=orange!5, rounded corners, inner sep=8pt,
+        fit=(researcher)(writer)(editor)(latex)(t1)(t4),
+        label={[font=\scriptsize, color=orange!80]above:ArticleSDK via ApiGatekeeper}] {};
+\end{scope}
+
+\end{tikzpicture}

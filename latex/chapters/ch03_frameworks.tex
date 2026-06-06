@@ -1,0 +1,56 @@
+% Chapter 3: Framework Comparison
+\chapter{Orchestration Frameworks}
+\label{ch:frameworks}
+
+\section{LangChain}
+
+LangChain \parencite{LangChain2023} is the foundational framework that popularised LLM
+chaining. It provides a rich toolkit of retrievers, memory stores, output parsers, and
+agent executors. Its modular design allows mixing providers (OpenAI, Anthropic, local models).
+
+Key abstractions: \texttt{Chain}, \texttt{AgentExecutor}, \texttt{Tool}, \texttt{Memory}.
+
+\section{CrewAI}
+
+CrewAI \parencite{CrewAI2024} is purpose-built for multi-agent collaboration. It models each
+agent with a \texttt{role}, \texttt{goal}, and \texttt{backstory}, enabling rich persona-driven
+reasoning. Tasks declare their \texttt{expected\_output}, creating verifiable contracts between
+agents.
+
+Key abstractions: \texttt{Agent}, \texttt{Task}, \texttt{Crew}, \texttt{Process}.
+
+\section{LangGraph}
+
+LangGraph \parencite{LangGraph2024} treats agent workflows as stateful graphs. Its
+\texttt{StateGraph} enables complex conditional routing, sub-graphs, and human-in-the-loop
+checkpoints with persistent state.
+
+Key abstractions: \texttt{StateGraph}, \texttt{Node}, \texttt{Edge}, \texttt{Checkpoint}.
+
+\section{AutoGen}
+
+AutoGen \parencite{AutoGen2023} from Microsoft Research emphasises conversational multi-agent
+systems where agents communicate via a message-passing protocol. It supports code execution
+in sandboxed environments.
+
+\section{Framework Comparison}
+
+\begin{longtable}{@{}lllll@{}}
+\toprule
+\textbf{Framework} & \textbf{Model} & \textbf{State} & \textbf{Human-in-loop} & \textbf{Best for} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Framework} & \textbf{Model} & \textbf{State} & \textbf{Human-in-loop} & \textbf{Best for} \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+LangChain  & Chain/Agent & Stateless    & Limited    & Retrieval + chains  \\
+CrewAI     & Crew/Task   & File-based   & Via SDK    & Role-based teams    \\
+LangGraph  & Graph       & Stateful     & Native     & Complex workflows   \\
+AutoGen    & Conversational & Message     & Native    & Code-gen + research \\
+\bottomrule
+\caption{Orchestration framework comparison}
+\label{tab:frameworks}
+\end{longtable}

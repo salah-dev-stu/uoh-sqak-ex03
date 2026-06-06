@@ -1,0 +1,61 @@
+% Chapter 4: Production Patterns
+\chapter{Production Patterns and Challenges}
+\label{ch:production}
+
+\section{Rate Limiting and Token Budgets}
+
+Production deployments must respect API rate limits to avoid throttling. A common pattern
+is the token-bucket algorithm \parencite{Turner1986}, which allows burst traffic up to a
+configured capacity $C$ while maintaining average rate $\lambda$:
+
+\begin{equation}
+  \text{tokens}(t) = \min\!\left(C,\; \text{tokens}(t-\Delta t) + \lambda \cdot \Delta t\right)
+  \label{eq:token-bucket}
+\end{equation}
+
+In the \texttt{ApiGatekeeper} implementation, the token bucket enforces per-service limits
+read from \texttt{config/rate\_limits.json}, ensuring zero hardcoded values in source code.
+
+\section{Observability and Structured Logging}
+
+Agent-based systems require rich observability. Each event should be logged as a structured
+JSONL record containing at minimum: \texttt{timestamp}, \texttt{component}, \texttt{level},
+\texttt{message}, and task-specific metadata.
+
+The FIFO log rotation scheme constrains disk usage to $N \times M$ lines where $N$ is the
+number of log files and $M$ is the maximum lines per file:
+
+\begin{equation}
+  \text{MaxDisk}(N, M) = N \cdot M \cdot \bar{b}
+  \label{eq:fifo-disk}
+\end{equation}
+
+where $\bar{b}$ is the average bytes per log line.
+
+\section{Fault Tolerance and Retries}
+
+Network calls to LLMs can fail transiently. The Gatekeeper wraps all calls with exponential
+backoff, retrying up to $k$ times with delay $d_i = d_0 \cdot 2^i + \epsilon$:
+
+\begin{equation}
+  d_i = d_0 \cdot 2^i + \epsilon, \quad i \in \{0, 1, \ldots, k-1\}
+  \label{eq:backoff}
+\end{equation}
+
+\section{Human-in-the-Loop Checkpoints}
+
+Between the Editor and LaTeX Producer agents, the SDK exposes an approval gate
+(\texttt{SDK.approve\_markdown()}). This allows a human reviewer to inspect the edited
+Markdown before committing to the expensive LaTeX compilation pass \parencite{Segal2026}.
+
+\section{Versioning Strategy}
+
+Every component tracks a version string starting at \texttt{1.00} and incremented by
+\texttt{0.01} per change. The invariant is:
+
+\begin{equation}
+  v_{\text{new}} = v_{\text{old}} + 0.01
+  \label{eq:version}
+\end{equation}
+
+This simple scheme ensures graders can audit change history without parsing commit messages.

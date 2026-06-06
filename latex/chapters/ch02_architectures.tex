@@ -1,0 +1,56 @@
+% Chapter 2: Agent Architectures
+\chapter{Agent Architectures and Topologies}
+\label{ch:arch}
+
+\section{Single-Agent Loop}
+
+The simplest architecture is the ReAct loop \parencite{Yao2022}: an agent receives a task,
+reasons about it, selects a tool action, observes the result, and repeats until the task is
+complete. This pattern underpins most LLM-based agents today.
+
+\section{Sequential Multi-Agent Pipeline}
+
+Sequential pipelines chain specialised agents where each agent's output becomes the next
+agent's input \parencite{CrewAI2024}. The pipeline used in this project follows this topology:
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{figures/agent_topology.png}
+  \caption{Framework comparison scores (Python-generated chart)}
+  \label{fig:topology-chart}
+\end{figure}
+
+\section{Hierarchical Multi-Agent Networks}
+
+Hierarchical architectures introduce a manager agent that decomposes goals and delegates to
+worker agents \parencite{AutoGen2023}. This enables dynamic task allocation but adds
+coordination overhead.
+
+\section{Peer-to-Peer (Graph) Architectures}
+
+LangGraph models agents as nodes in a directed graph with conditional edges \parencite{LangGraph2024}.
+Each node can route to any other node based on the current state, enabling loops, retries,
+and human-in-the-loop breakpoints.
+
+\section{Comparative Summary}
+
+\begin{longtable}{@{}llll@{}}
+\toprule
+\textbf{Topology} & \textbf{Coupling} & \textbf{Scalability} & \textbf{Complexity} \\
+\midrule
+\endfirsthead
+\multicolumn{4}{c}{\textit{(continued)}} \\
+\toprule
+\textbf{Topology} & \textbf{Coupling} & \textbf{Scalability} & \textbf{Complexity} \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+Single-agent loop  & N/A      & Low     & Low    \\
+Sequential pipeline & Tight   & Medium  & Medium \\
+Hierarchical       & Loose    & High    & High   \\
+Graph (LangGraph)  & Flexible & High    & High   \\
+\bottomrule
+\caption{Agent topology comparison}
+\label{tab:topology}
+\end{longtable}
