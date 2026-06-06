@@ -1,0 +1,14 @@
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.4.0
+    hooks:
+      - id: ruff
+        args: [--fix]
+  - repo: local
+    hooks:
+      - id: check-file-lines
+        name: Check Python file line counts (max 150 logical lines)
+        entry: uv run python scripts/check_file_lines.py
+        language: system
+        types: [python]
+        pass_filenames: false

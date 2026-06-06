@@ -1,0 +1,7 @@
+{
+  "version": "1.00",
+  "process": "sequential",
+  "verbose": true,
+  "agents": ["researcher", "writer", "editor", "latex_producer"],
+  "tasks": ["research", "write", "edit", "latex"]
+}

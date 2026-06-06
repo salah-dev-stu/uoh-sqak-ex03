@@ -1,0 +1,21 @@
+{
+  "version": "1.00",
+  "tasks": {
+    "research": {
+      "description": "Research the topic '{topic}'. Your deliverable is a comprehensive research notes file at workspace/research_notes.md. Structure your notes under these sections: (1) Overview and Key Definitions, (2) Major Frameworks and Their Architecture, (3) Comparative Analysis and Trade-offs, (4) Production Patterns and Challenges, (5) Bibliography. Cite at least 8 sources using [AuthorYear] inline citation format. Minimum 1500 words total.",
+      "expected_output": "A structured Markdown file at workspace/research_notes.md with 5 sections, minimum 1500 words, and at least 8 [AuthorYear] inline citations with full references in the Bibliography section."
+    },
+    "write": {
+      "description": "Using the research notes at workspace/research_notes.md, write 6 Markdown chapters for an article on '{topic}'. Save each chapter to workspace/chapters/. Chapters: ch01_introduction.md (~400 words, introduce the topic), ch02_architectures.md (~500 words, agent architectures and topologies), ch03_frameworks.md (~500 words, LangChain vs CrewAI vs LangGraph comparison with a Markdown table), ch04_production.md (~400 words, production patterns including a mathematical relationship you mark with [NEEDS_FORMULA]), ch05_bidi.md (~400 words, write at least 3 full paragraphs in Hebrew mixed with English technical terms), ch06_casestudy.md (~300 words, case study of this pipeline). Each chapter must include at least 2 inline citations.",
+      "expected_output": "6 Markdown files in workspace/chapters/: ch01_introduction.md, ch02_architectures.md, ch03_frameworks.md (with comparison table), ch04_production.md (with [NEEDS_FORMULA] marker), ch05_bidi.md (with Hebrew paragraphs), ch06_casestudy.md."
+    },
+    "edit": {
+      "description": "Review and polish all 6 chapters in workspace/chapters/. For each chapter: (1) enforce consistent terminology, (2) verify all [AuthorYear] citations are defined in the research notes bibliography, (3) ensure tables use pipe | syntax for clean LaTeX conversion, (4) verify ch05_bidi has at least 3 Hebrew paragraphs, (5) mark any mathematical relationship not yet marked as [NEEDS_FORMULA]. Save each polished chapter as ch0N_edited.md in workspace/chapters/.",
+      "expected_output": "6 edited Markdown files in workspace/chapters/: ch01_edited.md through ch06_edited.md. Each improved for clarity, citation correctness, and LaTeX readiness."
+    },
+    "latex": {
+      "description": "Convert the approved Markdown chapters in workspace/chapters/*_edited.md to a complete LaTeX article. Steps: (1) Read all 6 edited chapters. (2) Generate a bar chart using ChartGeneratorTool showing framework comparison scores — save as latex/figures/agent_topology.png. (3) Write latex/chapters/ch01_introduction.tex through ch06_casestudy.tex, converting Markdown to LaTeX. Include \\input{figures/crew_architecture.tikz} in ch01. In ch04, replace every [NEEDS_FORMULA] marker with \\begin{equation}...\\end{equation} — CRITICAL: fancy formula, not plain text. In ch05, use \\begin{hebrew}...\\end{hebrew} for Hebrew paragraphs. (4) Write latex/bib/references.bib with all citations in BibTeX format. (5) Run: lualatex main.tex, then biber main, then lualatex main.tex, then lualatex main.tex (4 passes total). Verify the .log has no unresolved references.",
+      "expected_output": "latex/output/uoh-sqak-article.pdf — a PDF of at least 15 pages with cover sheet, table of contents, 6 chapters, bibliography. The PDF must contain: at least one fancy equation (not plain text), at least one figure, the TikZ crew architecture diagram, at least one table, the BiDi Hebrew chapter, and clickable bibliography links."
+    }
+  }
+}

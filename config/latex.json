@@ -1,0 +1,20 @@
+{
+  "version": "1.00",
+  "compiler": "lualatex",
+  "biber": "biber",
+  "passes": 4,
+  "bib_style": "numeric-comp",
+  "chapter_list": [
+    "ch01_introduction",
+    "ch02_architectures",
+    "ch03_frameworks",
+    "ch04_production",
+    "ch05_bidi",
+    "ch06_casestudy"
+  ],
+  "output_dir": "latex/output",
+  "main_file": "latex/main.tex",
+  "target_pages": 15,
+  "language": "english",
+  "bidi_chapter": "ch05_bidi"
+}

@@ -1,0 +1,7 @@
+{
+  "version": "1.00",
+  "log_dir": "logs",
+  "fifo_files": 20,
+  "max_lines_per_file": 500,
+  "level": "INFO"
+}
