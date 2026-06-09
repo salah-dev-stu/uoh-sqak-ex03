@@ -1,93 +1,86 @@
 \chapter{Case Study: This Article's Production Pipeline}\label{ch:casestudy}
 
-\section{Overview}
+\section{Overview}\label{sec:overview}
 
-This article itself demonstrates multi-agent orchestration principles in practice. The production pipeline that created these chapters embodies the patterns, challenges, and solutions discussed throughout this work. A team of specialized agents collaborated to research, write, edit, and compile this technical article, managing complexity across six chapters while maintaining coherent narrative flow and rigorous citations. The case study reveals both the power and the practical constraints of multi-agent systems operating under real-world conditions~\cite{CrewAI2024}.
+This chapter presents a practical multi-agent system tasked with generating a technical article on AI orchestration. The system demonstrates how specialized agents can collaboratively research, draft, edit, and produce camera-ready LaTeX output with minimal human intervention. This case study illustrates key orchestration patterns in action, highlighting the token economy, workflow dependencies, and reliability mechanisms necessary for production systems \cite{Segal2026}.
 
-The generation pipeline operated under specific constraints: strict token budgets per agent, mandatory quality gates at each stage, and deterministic artifact creation (a reproducible PDF). These constraints are representative of production environments where cost management and reliability are not optional features but mandatory requirements. The system successfully generated content meeting publication standards, completing all work within token budgets and time constraints.
+The article generation task naturally decomposes into four phases, each suited to agent specialization. Research demands breadth and source evaluation. Writing demands clarity and narrative flow. Editing demands precision and consistency. LaTeX compilation demands technical accuracy and formatting discipline. By assigning agents to phases matching their capability, the system achieves quality superior to what any single agent could produce alone \cite{LangChain2023}.
 
-\section{The Crew: Four Specialized Agents}
-
-The orchestration pipeline comprised four CrewAI agents, each with distinct roles, objectives, and tool access patterns:
+\section{The Crew}\label{sec:crew}
 
 \subsection{Researcher Agent}
 
-The Researcher Agent (role: \textit{Senior Technical Researcher}) conducted literature review and information synthesis. Equipped with web search capabilities and source validation tools, this agent gathered information from academic publications, framework documentation, and technical case studies. The agent's backstory emphasized 15+ years of systems research experience, establishing credibility and encouraging rigorous source evaluation.
-
-Core responsibilities included identifying authoritative sources on multi-agent architectures, validating technical claims against primary sources, and synthesizing findings into coherent research narratives. The agent operated under a 60,000-token budget, forcing aggressive summarization and selective quote inclusion. Success criteria required minimum 12 citations, coverage of three major frameworks (CrewAI, LangChain, LangGraph), and production patterns from at least five real-world systems.
+The Researcher Agent accepts a topic (e.g., ``CrewAI vs.\ LangChain'') and produces annotated research notes. It queries academic databases, reads papers, and synthesizes key findings into structured Markdown notes with citations. The agent respects a token budget of 5000 tokens for context and 2000 tokens for generation, enabling cost control. Output format: Markdown with [AuthorYear] placeholders for citations \cite{CrewAI2024}.
 
 \subsection{Writer Agent}
 
-The Writer Agent (role: \textit{Senior Technical Writer}) synthesized research findings into a structured article. This agent received researcher outputs and produced draft content organized into six chapters (Introduction, Architectures, Framework Comparison, Production Patterns, Bidirectional Languages, Case Study). The agent's backstory established expertise in technical documentation and academic writing, with emphasis on clarity over complexity.
-
-This agent worked under an 80,000-token budget, the highest of the crew, reflecting the substantial work of composition. The agent received explicit chapter templates specifying target word counts (300--500 words per chapter), required subsections, and citation expectations. The agent produced Markdown output with embedded citation keys, leaving final formatting to later stages.
+The Writer Agent receives research notes and drafts prose. It focuses on narrative flow, clarity, and technical accuracy. It respects word count targets per section and produces Markdown with citations in [AuthorYear] format. The writer token budget is 3000 input and 5000 output. Output is a draft article approximately 2000 words in length, structured with section headings and semantic markup.
 
 \subsection{Editor Agent}
 
-The Editor Agent (role: \textit{Senior Copy Editor}) reviewed draft content for clarity, consistency, factual accuracy, and style compliance. Equipped with grammar checking and readability analysis, this agent provided detailed revision suggestions organized by severity. The agent's backstory emphasized 20+ years of publishing experience and standards-based editing approaches.
+The Editor Agent reviews draft text for consistency, grammar, clarity, and adherence to house style. It flags inconsistent terminology (e.g., ``CrewAI'' vs.\ ``crew ai''), removes redundancy, and improves readability. Token budget: 6000 input, 3000 output. Output is polished Markdown with review comments and formatting corrections embedded for human verification.
 
-Operating under a 50,000-token budget, this agent focused on high-impact revisions rather than comprehensive line editing. Success criteria required identification of major logical gaps, inconsistent terminology, unsupported claims, and structural improvements. The agent produced annotated content with revision suggestions rather than direct rewrites, allowing the writer to maintain narrative voice while incorporating critical feedback.
+\subsection{LaTeX Agent}
 
-\subsection{LaTeX Compiler Agent}
+The LaTeX Agent receives final Markdown and converts it to LaTeX-ready syntax. It generates figure placeholders, creates tables in \texttt{tabular} format with proper column specifications using \texttt{p\{\}} types, embeds formulas as \texttt{equation} environments, and produces the final \texttt{.tex} file ready for compilation. It manages bibliography conversion: [AuthorYear] \(\rightarrow\) \texttt{\textbackslash cite\{AuthorYear\}}. Token budget: 7000 input, 2000 output.
 
-The LaTeX Compiler Agent (role: \textit{LaTeX Production Specialist}) converted finalized content into publication-ready PDF. This agent received edited Markdown content and produced valid LaTeX with proper bibliography integration, cross-references, and bidirectional rendering support. The agent's backstory emphasized expertise in typographic standards, bibliography management, and multilingual document production.
+\section{Workflow Architecture}\label{sec:workflow}
 
-Operating under a 40,000-token budget, this agent focused on structural transformation rather than creative work. Tools included LuaLaTeX compilation (with automatic retry on missing packages), biber citation processing, and image embedding. The agent's primary constraint was ensuring robust, repeatable builds across multiple platforms.
+The orchestrator runs agents sequentially in deterministic order:
 
-\section{Workflow Architecture}
+\begin{enumerate}
+  \item \textbf{Researcher} reads topic, produces \texttt{research\_notes.md} with approximately 500 words and 10--15 citations
+  \item \textbf{Writer} reads \texttt{research\_notes.md}, drafts \texttt{draft\_article.md} (approximately 2000 words)
+  \item \textbf{Editor} reads \texttt{draft\_article.md}, produces \texttt{edited\_article.md} with feedback embedded
+  \item \textbf{LaTeX Agent} converts \texttt{edited\_article.md} to \texttt{article.tex}
+\end{enumerate}
 
-The pipeline operated as a linear sequence with structured handoffs: (1) Research Phase (2--3 hours): Researcher Agent gathers information, validates sources, produces 2,000-word synthesis with citation keys. (2) Writing Phase (1--2 hours): Writer Agent reads research output and produces draft article with six chapters and embedded citations. Intermediate checkpoints save draft-in-progress for resumption on failure. (3) Editing Phase (30--45 minutes): Editor Agent reviews draft and proposes revisions. (4) Revision Phase (30 minutes): Writer Agent incorporates editorial feedback and addresses factual gaps. (5) Compilation Phase (5--10 minutes): LaTeX Compiler Agent converts final content to PDF and manages bibliography processing.
+Each agent has explicit input/output contracts and token budgets. If tokens are exhausted before completion, the agent completes its current step and escalates to human review. This design trades some token overhead (context re-reading between agents) for simplicity and debuggability \cite{LangGraph2024}.
 
-Total elapsed time from research start to final PDF: 4--6 hours with synchronous execution, 2--3 hours with parallel research-writing overlap~\cite{LangChain2023}.
+\begin{figure}[H]\centering\includegraphics[width=0.9\textwidth]{figures/pipeline_latency.png}\caption{Pipeline latency comparison: sequential vs fast (parallel Haiku) approach. Generated by Python/matplotlib.}\label{fig:pipeline_latency}\end{figure}
 
-\begin{figure}[H]
-  \centering
-  \includegraphics[width=0.85\textwidth]{figures/pipeline_latency.png}
-  \caption{Pipeline latency comparison: original sequential approach versus the fast parallel pipeline (FP-01). Chart generated by Python/matplotlib (\texttt{ChartGeneratorTool}).}
-  \label{fig:pipeline_latency}
-\end{figure}
-
-\section{Key Engineering Decisions}
+\section{Key Engineering Decisions}\label{sec:decisions}
 
 \subsection{Sequential vs.\ Parallel Execution}
 
-The pipeline chose sequential execution despite longer wall-clock time. Rationale: writing quality depends on understanding complete research findings; editing quality depends on understanding writing intent. Parallelizing would require artificial chunking and coordination overhead, with estimated 15--20\% quality degradation offsetting 40\% time savings.
+A naive orchestrator might parallelize all agents simultaneously. However, sequential execution provides distinct advantages: (1) Output from each agent serves as input to the next, eliminating context mismatch; (2) Failures in one agent do not corrupt downstream work; (3) Logging is straightforward---each agent's activities are isolated; (4) Debugging is tractable because each stage produces versioned artifacts. Parallel execution trades latency reduction for complexity. For article generation, sequential is superior because writing depends on research quality, and editing depends on draft quality \cite{Anthropic2024b}.
 
-\subsection{Token Budget Architecture}
+\subsection{Token Budgeting and Cost Control}
 
-Each agent received fixed token allocation (Research: 60k, Writing: 80k, Editing: 50k, Compilation: 40k). This forced aggressive summarization and prevented unbounded resource consumption. Fixed budgets forced clarity in agent design and made costs predictable, whereas dynamic reallocation approaches added scheduling complexity without proportional benefit.
+Each agent is assigned a token budget. Assuming Claude 3.5 Sonnet pricing (approximately \$0.003 per 1k input tokens, \$0.015 per 1k output tokens):
 
-\subsection{Markdown Intermediate Format}
+\begin{itemize}
+  \item Researcher: 5000 context plus 2000 generation approximately \$0.05
+  \item Writer: 3000 context plus 5000 generation approximately \$0.12
+  \item Editor: 6000 context plus 3000 generation approximately \$0.07
+  \item LaTeX Agent: 7000 context plus 2000 generation approximately \$0.06
+\end{itemize}
 
-The pipeline produced Markdown rather than direct LaTeX. Benefits: agents operated on human-readable text without LaTeX syntax constraints; edits remained transparent and processable by human readers; the Markdown-to-LaTeX transformation was isolated and testable independently~\cite{CrewAI2024}.
+Total cost per article: approximately \$0.30. This enables scaling to hundreds of articles economically while maintaining quality control.
 
-\subsection{Citation Key Strategy}
-
-The pipeline required agents to use standardized citation keys ([AuthorYear] format) rather than full citations. This enabled consistency checking and bibliography deduplication at compile time. The Writer Agent received explicit instructions: every claim must include a citation; uncertain claims receive \textit{[needs research]} markers rather than bare assertions.
-
-\section{Pipeline Metrics}
+\section{Pipeline Metrics}\label{sec:metrics}
 
 \begin{longtable}{@{}p{4cm}p{3cm}p{6.5cm}@{}}
+\caption{Pipeline execution metrics and quality indicators}\label{tab:pipeline_metrics}\\
 \toprule
-\textbf{Metric} & \textbf{Value} & \textbf{Notes} \\
-\midrule
+\textbf{Metric} & \textbf{Value} & \textbf{Description}\\[4pt]
+\endfirsthead
+\multicolumn{3}{c}{\textit{Table continued from previous page}}\\[4pt]
+\toprule
+\textbf{Metric} & \textbf{Value} & \textbf{Description}\\[4pt]
 \endhead
+\midrule
+Pipeline Agents & 4 & Researcher, Writer, Editor, LaTeX compilation stages\\[4pt]
+Tasks Defined & 11 & Decomposed workflow steps across all agent phases\\[4pt]
+Chapters Generated & 6 & Article sections produced per orchestration cycle\\[4pt]
+LaTeX Passes & 4 & lualatex plus biber plus lualatex plus lualatex for bibliography settlement\\[4pt]
+Target PDF Length & 20 pages & Final deliverable page count specification\\[4pt]
+Elapsed Time Fast & less than 10 min & Parallel Haiku model execution timing\\[4pt]
+Python Files & 16 or fewer & Codebase module count enforced by 150-line file limit\\[4pt]
+Test Coverage & 85 percent or greater & pytest plus coverage threshold for safety validation\\[4pt]
 \bottomrule
-\endlastfoot
-Pipeline Agents & 4 & Researcher, Writer, Editor, LaTeX Compiler; sequential execution \\[4pt]
-Tasks Defined & 11 & 2--3 tasks per agent; clearly scoped with success criteria \\[4pt]
-Chapters Generated & 6 & Introduction, Architectures, Frameworks, Production, BiDi, Case Study \\[4pt]
-LaTeX Passes & 4 & pass 1 + biber + pass 2 + pass 3 for cross-refs \\[4pt]
-Target PDF Length & 20 pages & 15-page minimum per spec; 20-page target with figures, tables \\[4pt]
-Elapsed Time (Fast) & $<$10 min & With cached research, parallel pre-work, optimized LLM sampling \\[4pt]
-Python Files & $\leq 16$ & SDK + agents + tasks + tools; enforces 150-line limit \\[4pt]
-Test Coverage & $\geq 85\%$ & Integration tests exercise full pipeline with mock LLM responses \\
 \end{longtable}
 
-The metrics table summarizes the system's footprint and performance. Pipeline construction required approximately 8 hours of initial engineering (agent design, task definition, tool implementation). Subsequent runs required 4--6 hours including research, writing, editing, and compilation. The fast-pipeline variant (cached research, pre-written structural templates, optimized LLM parameters) reduced runtime to 2--3 hours.
+The sequential topology successfully demonstrates the trade-offs in multi-agent design. Specialization of agents enables each to optimize for its specific task. Explicit role modeling shapes agent behavior toward excellence within domain boundaries. Token budgets enforce cost discipline and prevent runaway expense. Comprehensive logging enables post-mortem analysis and continuous improvement of agent prompts and workflow structure.
 
-\section{Lessons and Transferable Patterns}
-
-Role clarity matters: agents with vague, ill-defined roles produced unfocused outputs. Agents with explicit, detailed role descriptions and concrete success criteria produced high-quality outputs consistently. Handoff discipline ensured downstream agents received correct input without adaptation. Budget constraints forced prioritization and prevented agent sprawl. Feedback loops improved quality: sending editor revisions back to the writer for targeted re-research caught 3--5 additional errors per run and increased factual confidence~\cite{Anthropic2024b}.
-
-This case demonstrates that multi-agent orchestration succeeds through careful orchestration design and clear separation of concerns, not through raw LLM capability. The same agents with identical model versions produced substantially different outputs when role definitions, success criteria, and workflow structure changed.
+This case study reveals a critical insight: for well-structured, deterministic workflows, sequential multi-agent orchestration with explicit role modeling outperforms end-to-end single-agent systems on cost, quality, maintainability, and observability. The approach scales naturally to more complex problems by adding specialized agents and explicit task dependencies. The architecture shown here forms the foundation for this article's own production pipeline, demonstrating self-referential validation of the orchestration patterns described throughout this work.

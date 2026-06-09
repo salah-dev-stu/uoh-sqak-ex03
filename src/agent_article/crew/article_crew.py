@@ -46,6 +46,10 @@ def _clean_latex(raw: str) -> str:
             if line.strip().startswith(("%", "\\", "@")):
                 start = i
                 break
+        else:
+            # No LaTeX/BibTeX content found at all — return empty to prevent
+            # writing a Markdown prose file that breaks compilation.
+            return ""
     return "\n".join(lines[start:end]).strip()
 
 
