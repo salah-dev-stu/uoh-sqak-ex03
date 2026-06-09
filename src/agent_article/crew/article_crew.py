@@ -75,12 +75,23 @@ class ArticleCrew:
         self._workspace = Path(cfg("setup", "workspace_dir", "workspace"))
         self._workspace.mkdir(parents=True, exist_ok=True)
 
+    def _build_prompt(self, task: Task) -> str:
+        """Combine task description with context outputs (editor's content)."""
+        prompt = task.description
+        for ctx in task.context or []:
+            output = getattr(ctx, "output", None)
+            raw_ctx = getattr(output, "raw", None) if output else None
+            if raw_ctx:
+                prompt = f"{prompt}\n\nContext from previous task:\n{raw_ctx}"
+        return prompt
+
     def _run_single_latex_task(self, task: Task) -> str:
         tid = threading.current_thread().name
         out_path = task.output_file or ""
         _log.info(f"[{tid}] latex task start: {out_path}")
         try:
-            raw = task.agent.llm.call(task.description)
+            prompt = self._build_prompt(task)
+            raw = task.agent.llm.call(prompt)
             clean = _clean_latex(raw)
             if out_path:
                 Path(out_path).parent.mkdir(parents=True, exist_ok=True)
