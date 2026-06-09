@@ -73,6 +73,7 @@ class ArticleCrew:
 
             latex_tasks = build_latex_tasks([t_edit])
             run_latex_phase_parallel(latex_tasks)
+            self._generate_figures()
 
             compiled = self._compile_pdf()
             output_filename = cfg("setup", "output_filename", "uoh-sqak-article.pdf")
@@ -87,6 +88,15 @@ class ArticleCrew:
             result.errors.append(str(exc))
             _log.error(f"Crew run failed: {exc}")
         return result
+
+    def _generate_figures(self) -> None:
+        """Generate all pipeline figures into latex/figures/ before compilation."""
+        from agent_article.tools.figure_generators import generate_all
+        try:
+            paths = generate_all()
+            _log.info(f"Generated {len(paths)} figures: {paths}")
+        except Exception as exc:
+            _log.error(f"Figure generation failed (non-fatal): {exc}")
 
     def _compile_pdf(self) -> Path | None:
         """Run lualatex→biber→lualatex→lualatex and return compiled PDF path."""

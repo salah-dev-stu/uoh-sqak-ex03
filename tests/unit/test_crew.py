@@ -71,6 +71,7 @@ def test_crew_run_success(tmp_path, monkeypatch):
         fake_pdf.parent.mkdir(parents=True, exist_ok=True)
         fake_pdf.write_bytes(b"%PDF")
         with patch.object(cm, "run_latex_phase_parallel", return_value=[]), \
+             patch.object(crew, "_generate_figures", return_value=None), \
              patch.object(crew, "_compile_pdf", return_value=fake_pdf):
             result = crew.run()
     assert result.success is True
