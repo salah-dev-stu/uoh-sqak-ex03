@@ -40,29 +40,22 @@ Tool augmentation shifts the bottleneck from reasoning capability to tool availa
 
 \section{Topology Comparison and Selection}
 
-\begin{longtable}{|p{1.8cm}|p{2.1cm}|p{2.1cm}|p{2.1cm}|p{2.3cm}|}
-\caption{Multi-agent orchestration topologies: characteristics and use cases.} \\
-\hline
-\textbf{Topology} & \textbf{Latency} & \textbf{Parallelism} & \textbf{Complexity} & \textbf{Ideal For} \\
-\hline
+\begin{longtable}{@{}p{2.8cm}p{2.8cm}p{2.6cm}p{2.0cm}p{3.9cm}@{}}
+\caption{Multi-agent orchestration topologies: characteristics and use cases.}\\
+\toprule
+\textbf{Topology} & \textbf{Latency} & \textbf{Parallelism} & \textbf{Compl.} & \textbf{Ideal For} \\
+\midrule
 \endfirsthead
-\multicolumn{5}{c}{{\bfseries \tablename~\thetable~(continued)}} \\
-\hline
-\textbf{Topology} & \textbf{Latency} & \textbf{Parallelism} & \textbf{Complexity} & \textbf{Ideal For} \\
-\hline
+\toprule
+\textbf{Topology} & \textbf{Latency} & \textbf{Parallelism} & \textbf{Compl.} & \textbf{Ideal For} \\
+\midrule
 \endhead
-\hline
-\endfoot
-\hline
-\endlastfoot
-Sequential & $\sum \ell_i$ (linear in stages) & None; strict ordering & Low & Well-defined workflows: research\,-\,write\,-\,edit \\
-\hline
-Hierarchical & $O(\ell_{\mathrm{super}} + \max_i \ell_i)$ per round & Moderate; teams parallel under supervisor & Medium & Large organizations; clear team boundaries \\
-\hline
-Peer-to-Peer & $O(N \cdot \ell_i)$ sequential or $O(\max \ell_i)$ parallel & High when parallel; meta-agent merges results & High & Critical decisions; high confidence required \\
-\hline
-Tool\-Augmented & $O(\ell_{\mathrm{agent}} + \ell_{\mathrm{tool}})$ & Depends on tool concurrency & Medium & Concrete problems; external APIs; verification \\
-\hline
+\midrule\multicolumn{5}{r}{\textit{Continued\ldots}}\\\endfoot
+\bottomrule\endlastfoot
+Sequential & $\sum_i \ell_i$ (linear) & None; strict ordering & Low & Well-defined pipelines: research, write, edit \\[5pt]
+Hierarchical & Supervisor $+\,\max_i \ell_i$ & Moderate; sub-teams in parallel & Medium & Large organisations; clear team boundaries \\[5pt]
+Peer-to-Peer & $N\!\cdot\!\ell_i$ or $\max_i\ell_i$ & High with parallel execution & High & Critical decisions; high confidence required \\[5pt]
+Tool-Augmented & $\ell_{\text{agent}}+\ell_{\text{tool}}$ & Depends on tool concurrency & Medium & External APIs; code execution; verification \\
 \end{longtable}
 
 \section{State Management Across Topologies}

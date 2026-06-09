@@ -38,24 +38,25 @@ The cost of AutoGen systems is higher than linear pipelines—multiple agents di
 
 \section{Framework Comparison Matrix}
 
-\begin{longtable}{@{}p{3.5cm}p{3.5cm}p{3.5cm}p{3.5cm}@{}}
+\begin{longtable}{@{}p{2.5cm}p{3.5cm}p{3.8cm}p{4.0cm}@{}}
+\toprule
+\textbf{Framework} & \textbf{Architecture} & \textbf{Strengths} & \textbf{Best For} \\
+\midrule
+\endfirsthead
 \toprule
 \textbf{Framework} & \textbf{Architecture} & \textbf{Strengths} & \textbf{Best For} \\
 \midrule
 \endhead
-\midrule
-\multicolumn{4}{r}{\textit{Continued on next page}} \\
-\endfoot
-\bottomrule
-\endlastfoot
+\midrule\multicolumn{4}{r}{\textit{Continued\ldots}}\\\endfoot
+\bottomrule\endlastfoot
 
-\textbf{LangChain} & Composable chains with LCEL; flexible agent runtimes & Broadest ecosystem; maximum flexibility; fine-grained control & Custom orchestration; novel workflows; deep integrations \\
+\textbf{LangChain} & Composable chains with LCEL; flexible agent runtimes & Broadest ecosystem; maximum flexibility; fine-grained control & Custom orchestration; novel workflows; deep integrations \\[8pt]
 
-\textbf{CrewAI} & Prescriptive role-based teams; process types (sequential, hierarchical, consensus) & Clear patterns; fast development; built-in memory; low learning curve & Standard pipelines (research-write-edit); rapid prototyping \\
+\textbf{CrewAI} & Prescriptive role-based teams; sequential, hierarchical, consensus process types & Clear patterns; fast development; built-in memory; low learning curve & Standard pipelines (research-write-edit); rapid prototyping \\[8pt]
 
-\textbf{LangGraph} & Explicit state graphs; deterministic node functions & Strong guarantees; debugging clarity; state persistence; resumption & Production systems; high reliability; complex reasoning \\
+\textbf{LangGraph} & Explicit state graphs; deterministic node functions & Strong guarantees; debugging clarity; state persistence; resumption & Production systems; high reliability; complex reasoning \\[8pt]
 
-\textbf{AutoGen} & Conversation-based agent coalitions; human-loop integration & Multiple perspectives; iterative refinement; human-in-the-loop & High-stakes decisions; code review; consensus reasoning \\
+\textbf{AutoGen} & Conversation-based agent coalitions; human-in-the-loop integration & Multiple perspectives; iterative refinement; human oversight & High-stakes decisions; code review; consensus reasoning \\
 
 \end{longtable}
 

@@ -74,13 +74,13 @@ The pipeline required agents to use standardized citation keys ([AuthorYear] for
 \endhead
 \bottomrule
 \endlastfoot
-Pipeline Agents & 4 & Researcher, Writer, Editor, LaTeX Compiler; sequential execution \\
-Tasks Defined & 11 & 2--3 tasks per agent; clearly scoped with success criteria \\
-Chapters Generated & 6 & Introduction, Architectures, Frameworks, Production, BiDi, Case Study \\
-LaTeX Passes & 4 & pass 1 + biber + pass 2 + pass 3 for cross-refs \\
-Target PDF Length & 20 pages & 15-page minimum per spec; 20-page target with figures, tables \\
-Elapsed Time (Fast) & $<$10 min & With cached research, parallel pre-work, optimized LLM sampling \\
-Python Files & $\leq 16$ & SDK + agents + tasks + tools; enforces 150-line limit \\
+Pipeline Agents & 4 & Researcher, Writer, Editor, LaTeX Compiler; sequential execution \\[4pt]
+Tasks Defined & 11 & 2--3 tasks per agent; clearly scoped with success criteria \\[4pt]
+Chapters Generated & 6 & Introduction, Architectures, Frameworks, Production, BiDi, Case Study \\[4pt]
+LaTeX Passes & 4 & pass 1 + biber + pass 2 + pass 3 for cross-refs \\[4pt]
+Target PDF Length & 20 pages & 15-page minimum per spec; 20-page target with figures, tables \\[4pt]
+Elapsed Time (Fast) & $<$10 min & With cached research, parallel pre-work, optimized LLM sampling \\[4pt]
+Python Files & $\leq 16$ & SDK + agents + tasks + tools; enforces 150-line limit \\[4pt]
 Test Coverage & $\geq 85\%$ & Integration tests exercise full pipeline with mock LLM responses \\
 \end{longtable}
 

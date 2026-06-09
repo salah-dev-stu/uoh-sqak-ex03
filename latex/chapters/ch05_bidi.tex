@@ -23,14 +23,14 @@
 טיפוגרפית התומכת בשפות הנכתבות מימין לשמאל לצד שפות הנכתבות משמאל לימין.
 תקן \foreignlanguage{english}{Unicode} מגדיר אלגוריתם דו-כיוניות פורמלי
 המאפשר עיבוד ותצוגה נכונים של טקסט המשלב מספר שפות בכיוונים שונים בתוך אותה
-פסקה~\cite{Unicode2023}.
+פסקה~\mbox{\cite{Unicode2023}}.
 
 בהקשר של מערכות סוכנים מבוססות-\foreignlanguage{english}{AI}, הדו-כיוניות
 אינה רק בעיה טיפוגרפית אלא משפיעה על כל שלב בצינור הייצור. כאשר סוכן מחקר
 אוסף מידע ממקורות עבריים ואנגליים, עליו לשמור על סדר ה-\foreignlanguage{english}{BiDi}
 של הטקסט המקורי. כאשר סוכן כותב מנסח פסקאות המשלבות מונחים טכניים באנגלית
 בתוך טקסט עברי, עליו לסמן בבירור את הגבולות הלשוניים כדי שסוכן
-ה-\foreignlanguage{english}{LaTeX} יוכל לייצר פלט גרפי תקין~\cite{Segal2026}.
+ה-\foreignlanguage{english}{LaTeX} יוכל לייצר פלט גרפי תקין~\mbox{\cite{Segal2026}}.
 
 האתגר המרכזי נובע מכך שמודלים של שפה גדולים
 (\foreignlanguage{english}{LLM}) מאומנים בעיקר על נתוני אימון משמאל-לימין.
@@ -39,7 +39,7 @@
 מערכות סוכנים הפועלות עם עברית להגדיר הנחיות מפורשות לכל סוכן לגבי ציון
 שפת כל קטע בפלט, תוך שימוש במאפייני כיוון מפורשים ב-\foreignlanguage{english}{JSON}
 או ב-\foreignlanguage{english}{XML}. מנגנון זה מבטיח שהטקסט המועבר מסוכן
-לסוכן שומר על מידע לשוני מספיק לטיפול ביצוגו הסופי~\cite{Unicode2023}.
+לסוכן שומר על מידע לשוני מספיק לטיפול ביצוגו הסופי~\mbox{\cite{Unicode2023}}.
 \end{hebrew}
 
 %----------------------------------------------------------------------
@@ -54,7 +54,7 @@
 אך עם פחות גמישות בניהול ריבוי שפות, \foreignlanguage{english}{LuaLaTeX}
 משלבת תמיכה מלאה ב-\foreignlanguage{english}{Unicode} עם יכולת תכנות
 \foreignlanguage{english}{Lua} עוצמתית, המאפשרת התאמה עדינה של התנהגות
-הדו-כיוניות~\cite{Polyglossia2023}.
+הדו-כיוניות~\mbox{\cite{Polyglossia2023}}.
 
 חבילת \foreignlanguage{english}{polyglossia} מגדירה את הסביבה הלשונית של
 המסמך. הגדרת השפה הראשית כעברית מאפשרת ל-\foreignlanguage{english}{LuaLaTeX}
@@ -64,7 +64,7 @@
 \foreignlanguage{english}{\texttt{\textbackslash foreignlanguage\{english\}\{\ldots\}}}.
 לחלופין, ניתן לעטוף קטעי עברית ארוכים בסביבת
 \foreignlanguage{english}{\texttt{hebrew}} הקובעת את כיוון הפסקה
-ל-\foreignlanguage{english}{RTL}~\cite{Polyglossia2023}.
+ל-\foreignlanguage{english}{RTL}~\mbox{\cite{Polyglossia2023}}.
 
 בסביבת עבודה של מערכת סוכנים, ניתן לממש שילוב זה בכמה שלבים. ראשית, סוכן
 הכתיבה מייצר \foreignlanguage{english}{Markdown} עם מאפייני שפה מפורשים:
@@ -75,7 +75,7 @@
 \foreignlanguage{english}{Biber} מבטיחים שכל ההפניות הצלבניות, הביבליוגרפיה
 ותוכן העניינים מעובדים כראוי. הפרדת האחריות בין שלב ייצור הטקסט לשלב
 הקומפילציה מאפשרת לכל סוכן להתמחות בתחומו ללא צורך בהכרה מעמיקה של
-פרטי \foreignlanguage{english}{LaTeX}~\cite{Segal2026}.
+פרטי \foreignlanguage{english}{LaTeX}~\mbox{\cite{Segal2026}}.
 \end{hebrew}
 
 %----------------------------------------------------------------------
@@ -89,7 +89,7 @@
 בהרצה אחת הסוכן עשוי לסמן כל מונח לועזי בבירור; בהרצה אחרת הוא עשוי
 לשלבם ללא כל סימון. אי-עקביות זו מחייבת שלב אחרי-עיבוד
 (\foreignlanguage{english}{post-processing}) שיזהה ויתקן שגיאות לפני
-העברת הטקסט לסוכן ה-\foreignlanguage{english}{LaTeX}~\cite{CrewAI2024}.
+העברת הטקסט לסוכן ה-\foreignlanguage{english}{LaTeX}~\mbox{\cite{CrewAI2024}}.
 
 האתגר השני קשור לכיסוי בדיקות. צוותי פיתוח נוטים לבדוק את המערכת בשפה
 אחת בלבד, בדרך כלל אנגלית, ולגלות את בעיות ה-\foreignlanguage{english}{BiDi}
@@ -97,7 +97,7 @@
 טקסט עברי ממשי: שמות עם ניקוד, מספרים בתוך משפטים עבריים, סוגריים
 בסיומת ביטוי, ותוויות גרפים עם תוכן דו-לשוני. בדיקות אינטגרציה צריכות
 להפעיל את כל צינור הייצור ולוודא שקובץ ה-\foreignlanguage{english}{PDF}
-הסופי עובר ביקורת \foreignlanguage{english}{BiDi} אוטומטית~\cite{Anthropic2024b}.
+הסופי עובר ביקורת \foreignlanguage{english}{BiDi} אוטומטית~\mbox{\cite{Anthropic2024b}}.
 
 האתגר השלישי הוא ביצועים. ניתוח ותיקון \foreignlanguage{english}{BiDi}
 לאחר כל הרצת סוכן מוסיף עיכוב לצינור, ועבור מאות מסמכים המיוצרים במקביל
@@ -105,14 +105,14 @@
 ישירות בהנחיות הסוכן (\foreignlanguage{english}{prompt engineering}),
 כך שהסוכן עצמו יבדוק את פלטו לפני מסירתו. גישה זו מנצלת את יכולות
 ה-\foreignlanguage{english}{reasoning} של המודל ומפחיתה את הצורך בסינון
-חיצוני~\cite{Anthropic2024b}.
+חיצוני~\mbox{\cite{Anthropic2024b}}.
 
 לבסוף, על הצוות לקבע גרסאות (\foreignlanguage{english}{pin versions}) של
 \foreignlanguage{english}{polyglossia} ו-\foreignlanguage{english}{LuaLaTeX}
 בקובץ ניהול התלויות, ולבדוק את קובץ ה-\foreignlanguage{english}{PDF}
 הסופי אוטומטית בכל בנייה—תוך בדיקת מספור עמודים, כיוון כותרות ויישור
 הביבליוגרפיה—כדי לוודא שאיכות ה-\foreignlanguage{english}{BiDi} נשמרת
-לאורך מחזור חיי המוצר~\cite{Polyglossia2023}.
+לאורך מחזור חיי המוצר~\mbox{\cite{Polyglossia2023}}.
 \end{hebrew}
 
 \addtocontents{toc}{\protect\etocstandardlines}\defaultheadingformat
@@ -135,7 +135,7 @@ annotations to \textsf{polyglossia} commands before compilation~\cite{Polyglossi
 \end{quote}
 
 The \textsf{polyglossia} package resolves directionality by treating each
-\verb|\foreignlanguage{english}{...}| span as an \textsc{ltr} island inside the
+\texttt{\textbackslash foreignlanguage\{english\}\{\ldots\}} span as an \textsc{ltr} island inside the
 surrounding \textsc{rtl} paragraph~\cite{Polyglossia2023}. The
 \foreignlanguage{english}{Unicode BiDi} algorithm then applies visual reordering
 when the \textsc{pdf} is rendered, ensuring that parentheses, punctuation, and
@@ -149,15 +149,15 @@ this article and recommended for any multi-agent pipeline that targets Hebrew
   \centering
   \caption{Markup conventions for Hebrew--English \foreignlanguage{english}{BiDi} rendering}
   \label{tab:bidi-markup}
-  \begin{tabular}{p{4.0cm} p{5.2cm} p{3.8cm}}
-    \hline
+  \begin{tabular}{@{}p{3.8cm}p{5.8cm}p{4.0cm}@{}}
+    \toprule
     \textbf{Context} & \textbf{\LaTeX{} command} & \textbf{Effect} \\
-    \hline
-    Long Hebrew paragraph  & \verb|\begin{hebrew}...\end{hebrew}|  & Sets paragraph to \textsc{rtl} \\[2pt]
-    Inline English term    & \verb|\foreignlanguage{english}{...}| & Inserts \textsc{ltr} island \\[2pt]
-    Short Hebrew phrase    & \verb|\texthebrew{...}|                & Inserts \textsc{rtl} island \\[2pt]
-    Hebrew chapter heading & \verb|\hebrewheadingformat|            & Applies \textsc{rtl} heading style \\[2pt]
-    \hline
+    \midrule
+    Long Hebrew paragraph  & \texttt{\textbackslash begin\{hebrew\}\ldots\textbackslash end\{hebrew\}}  & Sets paragraph to \textsc{rtl} \\[4pt]
+    Inline English term    & \texttt{\textbackslash foreignlanguage\{english\}\{\ldots\}} & Inserts \textsc{ltr} island \\[4pt]
+    Short Hebrew phrase    & \texttt{\textbackslash texthebrew\{\ldots\}}                & Inserts \textsc{rtl} island \\[4pt]
+    Hebrew chapter heading & \texttt{\textbackslash hebrewheadingformat}            & Applies \textsc{rtl} heading style \\
+    \bottomrule
   \end{tabular}
 \end{table}
 
