@@ -11,6 +11,13 @@ The simplest multi-agent orchestration pattern is linear sequential execution, w
 \label{fig:crew_architecture}
 \end{figure}
 
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{figures/agent_network.png}
+\caption{Agent communication network: data flow through the pipeline. Circular nodes are CrewAI agents (sized by token budget); square nodes are file artefacts passed between stages.}
+\label{fig:agent-network}
+\end{figure}
+
 Sequential execution is the default process model in CrewAI, implemented via the \texttt{Process.SEQUENTIAL} enum. Tasks are defined in dependency order; the framework enforces the ordering. However, this simplicity comes at a cost: parallelization opportunities are lost. If Agent~A finishes early and Agent~C is ready to begin, Agent~C must wait for Agent~B to complete its portion of the work. For large orchestrations with independent subtasks, this serialization creates substantial idle time.
 
 The total latency of a linear pipeline is the sum of individual agent latencies, expressed formally as:
