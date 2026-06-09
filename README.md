@@ -282,8 +282,8 @@ pre-commit run --all-files            # all hooks
 Version starts at `1.00`, incremented by `0.01` per change:
 ```python
 from agent_article.shared.version import VERSION, bump
-print(VERSION)          # "1.12"
-print(bump(VERSION))    # "1.13"
+print(VERSION)          # "1.14"
+print(bump(VERSION))    # "1.15"
 ```
 
 ---
