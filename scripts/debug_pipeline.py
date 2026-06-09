@@ -14,6 +14,7 @@ def done(label, t0):
 
 t_total = timed("import config")
 import agent_article.shared.config as cfg_mod  # noqa: E402
+
 done("import config", t_total)
 
 t = timed("reload config")
@@ -22,6 +23,7 @@ done("reload config", t)
 
 t = timed("import ClaudeCLILLM")
 from agent_article.shared.claude_cli_llm import ClaudeCLILLM  # noqa: E402
+
 done("import ClaudeCLILLM", t)
 
 t = timed("instantiate ClaudeCLILLM")
@@ -35,6 +37,7 @@ done("llm.call", t)
 
 t = timed("import ResearcherAgent")
 from agent_article.agents.researcher_agent import ResearcherAgent  # noqa: E402
+
 done("import ResearcherAgent", t)
 
 t = timed("build ResearcherAgent")
@@ -43,6 +46,7 @@ done("build ResearcherAgent", t)
 
 t = timed("ResearcherAgent.build() → crewai.Agent")
 from unittest.mock import patch  # noqa: E402
+
 with patch("agent_article.agents.base_agent.Agent") as mock:
     import unittest.mock  # noqa: E402
     mock.return_value = unittest.mock.MagicMock()
@@ -50,7 +54,7 @@ with patch("agent_article.agents.base_agent.Agent") as mock:
 done("ResearcherAgent.build()", t)
 
 t = timed("import Crew + Process")
-from crewai import Crew, Process, Task  # noqa: E402
+
 done("import Crew + Process", t)
 
 print("\nDone. Longest step is the bottleneck.")

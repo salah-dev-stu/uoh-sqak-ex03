@@ -1,5 +1,4 @@
 """Python wrapper for the 4-pass LuaLaTeX build (alternative to make)."""
-import os
 import subprocess
 import sys
 from pathlib import Path
