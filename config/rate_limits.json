@@ -8,7 +8,7 @@
       "warn_at_percent": 75,
       "hard_cap_percent": 95,
       "haiku_timeout_seconds": 300,
-      "sonnet_timeout_seconds": 600
+      "sonnet_timeout_seconds": 1200
     },
     "duckduckgo": {
       "requests_per_minute": 5

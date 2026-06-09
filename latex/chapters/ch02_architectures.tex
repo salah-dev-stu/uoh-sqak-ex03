@@ -1,68 +1,65 @@
 \chapter{Agent Architectures and Topologies}\label{ch:architectures}
 
-\section{Linear Sequential Architecture}\label{sec:linear-sequential}
+Agent orchestration topologies represent the fundamental structural patterns through which multiple agents coordinate to solve complex problems. Each topology embodies distinct trade-offs between latency, parallelism, complexity, and observability. Understanding these patterns is essential for selecting or designing an orchestration architecture that matches problem domain constraints, operational budgets, and quality requirements~\cite{LangChain2024a}.
 
-The linear sequential topology is the simplest orchestration pattern: tasks execute in a fixed, predetermined order, and each task's output becomes the next task's input. This pattern is deterministic, easy to debug, and suitable for workflows where dependencies form a simple chain. In a linear pipeline, latency accumulates across stages; parallelism is zero because no two agents run simultaneously \cite{CrewAI2024}.
+\section{Linear Sequential Orchestration}\label{sec:linear_seq}
 
-\begin{figure}[H]
-\centering
-\resizebox{\textwidth}{!}{\input{figures/crew_architecture.tikz}}
-\caption{CrewAI multi-agent architecture.}
-\label{fig:crew_architecture}
-\end{figure}
+Linear sequential orchestration chains agents in strict order: Agent A completes its task, produces structured output, passes it to Agent B, which processes and passes results to Agent C, and so forth. This pattern mirrors traditional data pipelines and is ideal for problems with a natural progression of steps. A research pipeline exemplifies this topology: a Researcher agent gathers information and synthesizes sources, a Writer agent drafts narrative content from the synthesis, an Editor agent refines prose and enforces style guidelines, and a \LaTeX{} Producer agent formats the final document for publication~\cite{CrewAI2024}.
 
-The linear model works well for content generation pipelines. A researcher agent completes its task, producing a research document. The writer agent consumes that document and produces a draft. The editor agent refines the draft. Finally, a LaTeX producer agent converts the polished markdown to PDF. Each stage has explicit input and output contracts, reducing ambiguity. The downside is latency: if any single stage takes long, the entire pipeline stalls. There is no opportunity for parallelism to hide latency \cite{LangChain2024a}.
+\begin{figure}[H]\centering\resizebox{\textwidth}{!}{\input{figures/crew_architecture.tikz}}\caption{CrewAI multi-agent architecture.}\label{fig:crew_architecture}\end{figure}
 
-\section{Hierarchical Manager-Worker Topology}\label{sec:hierarchical-manager}
+Sequential architectures offer predictability and simplicity: you know exactly when each agent runs, what input it receives, and in what order results are computed. The trade-off is rigidity. If an early agent produces unusable output, the entire pipeline must restart or be manually corrected. Additionally, latency accumulates linearly with the number of agents; there are no parallelism opportunities to hide latency under concurrent execution~\cite{LangChain2024a}.
 
-Hierarchical orchestration introduces a central coordinator (the Manager) that delegates work to multiple worker agents. The Manager breaks a large task into subtasks, assigns each subtask to a worker, waits for all workers to complete, aggregates results, and moves to the next level of decomposition. This pattern enables partial parallelism: all workers at the same level run concurrently, though levels are sequential \cite{CrewAI2024}.
+The latency of a sequential pipeline is given by:
+\begin{equation}L_{\mathrm{seq}}=\sum_{i=1}^{N}\ell_i\label{eq:pipeline_latency}\end{equation}
+where $\ell_i$ is the latency (wall-clock time) of agent $i$ and $N$ is the total number of agents. For a 4-agent research pipeline with per-agent latencies of 5\,s (Researcher), 10\,s (Writer), 8\,s (Editor), and 6\,s (\LaTeX{} Producer), the total pipeline latency is 29\,s, unavoidable by design.
 
-For instance, if a Manager task is ``research five historical developments in AI'', the Manager spawns five worker Researcher agents in parallel, each investigating one development. Once all five complete, the Manager aggregates their findings into a consolidated research document. The next level—Writing—begins only when the aggregation finishes. This pattern balances simplicity with parallelism and is the de facto standard in CrewAI's process design \cite{LangChain2024a}.
+\section{Hierarchical Manager-Worker Orchestration}\label{sec:hierarchical}
 
-Hierarchical topology requires careful error handling. If one worker fails, the Manager must decide: retry the worker, skip the failed subtask, or abort the entire pipeline. These decisions are typically encoded in the process's exception handling logic.
+Hierarchical systems introduce a supervisor agent (manager) that observes problem state and delegates tasks to worker agents based on dynamic conditions. The supervisor reasons about the problem structure, selects which workers to invoke, synthesizes their outputs, and decides whether additional work is needed. This pattern enables adaptive execution: the supervisor can route complex queries to specialist agents and simple queries to faster, cheaper models, achieving latency and cost optimization not possible in rigid sequential pipelines~\cite{LangChain2024a}.
 
-\section{Peer-to-Peer Consensus Topology}\label{sec:peer-to-peer}
+Hierarchical topologies scale well to many specialized agents (10+) because the supervisor provides a single decision point, preventing exponential branching of execution paths. However, the cost is complexity: the supervisor itself must be sophisticated enough to route reliably, and debugging routing errors requires introspection of the supervisor's reasoning process. Additionally, the supervisor becomes a bottleneck if it cannot parallelize its worker invocations.
 
-In a peer-to-peer topology, agents communicate directly without a central coordinator. Agents can route work to each other, negotiate on disagreements, and collectively converge on a solution. This topology is useful for debate and consensus scenarios: multiple specialist agents deliberate on a question, each offering a perspective, until agreement is reached or a voting threshold is met.
+\section{Peer-to-Peer Consensus Orchestration}\label{sec:peer_consensus}
 
-Peer-to-peer systems are highly resilient (no single point of failure) and naturally distributed. However, they risk deadlock (agents waiting for each other indefinitely) and require explicit termination conditions. In practice, peer-to-peer orchestration is implemented as a custom graph in LangGraph, where agents are nodes and message-passing edges define communication channels \cite{LangGraph2024}.
+Peer-to-peer topologies allow agents to work in parallel without a central coordinator, communicating directly with one another to reach consensus on shared decisions. Multiple researchers might simultaneously investigate different aspects of a topic, then hand off to a shared editor who synthesizes and cross-validates their findings. Parallelism reduces wall-clock latency and enables true concurrency; a 4-agent peer team can complete work in approximately $\max_i(\ell_i)$ time rather than $\sum_i(\ell_i)$~\cite{AutoGen2023}.
 
-A concrete example: four specialist agents (Historian, Technologist, Ethicist, Economist) each evaluate a proposal from their perspective. They exchange critiques asynchronously until consensus is reached or a fixed number of rounds completes. The final agreed-upon judgment is the output.
+However, peer-to-peer systems require careful state management: shared resources must be protected from concurrent modification, and convergence points must handle variable-speed agents gracefully. Debugging is harder because there is no central audit trail; execution traces must be reconstructed from each agent's logs. Additionally, consensus mechanisms (voting, averaging, arbitration) add latency and complexity.
 
-\section{Tool-Augmented Specialists Topology}\label{sec:tool-augmented}
+\section{Tool-Augmented Specialist Orchestration}\label{sec:tool_augmented}
 
-This topology equips each agent with a rich set of tools tailored to its specialty. Rather than agents calling other agents, they invoke domain-specific tools: a Researcher agent has web search, database query, and citation-parsing tools; a Writer agent has style-checking, paraphrasing, and grammar tools; an Editor agent has plagiarism detection and fact-checking tools. Tools are gated through a Gatekeeper to enforce rate limits and token budgets \cite{Anthropic2024b}.
+Tool-augmented orchestration provides agents with rich toolkits (web search, code execution, file I\texttt{\&}O, external API access) rather than expecting them to reason from static knowledge. A Researcher agent equipped with web search tools can fetch the latest information; a Writer agent equipped with a chart-generation tool can create visualizations programmatically; a \LaTeX{} Producer agent equipped with a compilation tool can validate syntax and produce PDFs. This pattern significantly improves output quality and grounding in observed reality rather than hallucination~\cite{LangChain2024a}.
 
-Tool-augmented specialists allow each agent to solve its portion of the problem independently without directly depending on other agents' outputs (though inputs may be provided upfront). This topology scales well: new tools can be added without modifying agent logic, and tool invocations are fully observable in logs. The trade-off is that agents cannot leverage each other's reasoning in real time; tool results must be synthesized at a higher level.
+Tool access introduces new operational concerns: tools are rate-limited (web search APIs allow $N$ calls per minute), carry cost (each tool invocation consumes tokens and API credits), and may fail (network errors, malformed outputs). Production systems implement a Gatekeeper layer that intercepts all tool calls, enforces rate limits, tracks token consumption, and handles errors gracefully~\cite{CrewAI2024}.
 
-\section{Topology Comparison}\label{sec:topology-comparison}
+\section{Topology Comparison and Selection}\label{sec:topology_comparison}
 
-Each topology presents distinct trade-offs in latency, parallelism, complexity, and suitability. The latency of a linear sequential pipeline is the sum of all task latencies:
-
-\begin{equation}
-L_{\mathrm{seq}} = \sum_{i=1}^{N} \ell_i
-\label{eq:pipeline_latency}
-\end{equation}
-
-where $\ell_i$ is the latency of stage $i$ and $N$ is the number of stages. In contrast, hierarchical topology latency is bounded by the critical path: the slowest worker at each level, plus coordination overhead.
+Each topology presents distinct trade-offs. The following table synthesizes the key dimensions:
 
 \begin{longtable}{@{}p{2.8cm}p{2.8cm}p{2.6cm}p{2.0cm}p{3.9cm}@{}}
 \toprule
-\textbf{Topology} & \textbf{Latency} & \textbf{Parallelism} & \textbf{Complexity} & \textbf{Ideal For} \\
-\midrule
+\textbf{Topology} & \textbf{Latency Model} & \textbf{Parallelism} & \textbf{Complexity} & \textbf{Ideal For} \\[5pt]
 \endfirsthead
 \toprule
-\textbf{Topology} & \textbf{Latency} & \textbf{Parallelism} & \textbf{Complexity} & \textbf{Ideal For} \\
-\midrule
+\textbf{Topology} & \textbf{Latency Model} & \textbf{Parallelism} & \textbf{Complexity} & \textbf{Ideal For} \\[5pt]
 \endhead
+\midrule
+Linear Sequential & $\sum_i \ell_i$ & None & Low & Well-defined workflows: research pipelines, content generation, refining stages \\[5pt]
+Hierarchical & $\ell_{\mathrm{super}} + \max_i(\ell_i^{\mathrm{worker}})$ & Within supervisor's workers & Medium & Adaptive routing: complex tasks routed to specialists, simple to fast models \\[5pt]
+Peer-to-Peer & $\max_i(\ell_i) + \ell_{\mathrm{sync}}$ & Full & High & Consensus problems: debate, fact-checking, multiple independent investigations \\[5pt]
+Tool-Augmented & Depends on tool costs & If tools async & Medium & Grounding in reality: web search, code execution, external data integration \\[5pt]
+Graph-Based (DAG) & Depends on structure & Full, conditional & High & General workflows: cycles, branches, complex dependencies \\[5pt]
 \bottomrule
-\endlastfoot
-Linear Sequential & $\sum_i \ell_i$ & None & Low & Simple workflows \\[5pt]
-Hierarchical Manager-Worker & $\max(\ell_i)$ per level & Limited & Medium & Task decomposition \\[5pt]
-Peer-to-Peer Consensus & Variable & High & High & Debate scenarios \\[5pt]
-Tool-Augmented Specialists & $\sum \ell_i + \delta$ & Medium & High & Diverse expertise \\[5pt]
 \end{longtable}
 
-Linear sequential pipelines are simplest but inflexible; they are appropriate when tasks have strict dependencies and latency is not critical \cite{CrewAI2024}. Hierarchical topologies sacrifice some of that simplicity to enable parallelism at each level; they are suitable for problems that decompose naturally into independent subtasks. Peer-to-peer consensus is costly in complexity but invaluable for scenarios where multiple perspectives must be reconciled. Tool-augmented specialists allow maximum independence but require careful tool design and gating to avoid inconsistent outputs \cite{LangChain2024a}.
+Selection guidance follows from problem characteristics:
 
-For production multi-agent systems, CrewAI's default hierarchical orchestration strikes a pragmatic balance: enough parallelism to hide latency, enough centralization to ensure observability and error control. The article generation pipeline described in \autoref{ch:case-study} uses a linear sequential topology because the problem naturally decomposes into sequential stages: research informs writing, writing informs editing, editing informs publication. Non-linear topologies would add complexity without proportional benefit \cite{Segal2026}, \cite{Microsoft2025}.
+\begin{itemize}
+\item \textbf{Sequential}: Choose when the problem has a natural linear progression (research $\to$ draft $\to$ edit $\to$ format). Pros: simple to implement, easy to debug. Cons: no parallelism, bottleneck on slow stages.
+\item \textbf{Hierarchical}: Choose when many specialized agents must be coordinated by a decision-maker. Pros: adaptive, scalable to many agents. Cons: supervisor complexity, potential bottleneck.
+\item \textbf{Peer-to-Peer}: Choose when multiple agents must independently verify a claim or explore a problem from different angles. Pros: parallelism, robustness. Cons: consensus complexity, harder debugging.
+\item \textbf{Tool-Augmented}: Choose when agents must ground outputs in real-world data (live search, APIs, computations). Pros: better quality, less hallucination. Cons: operational burden (rate limits, errors, cost).
+\item \textbf{Graph-Based (DAG)}: Choose when the workflow has complex branching, loops, or conditional dependencies. Pros: maximally expressive. Cons: complex to design and debug.
+\end{itemize}
+
+Production deployments often combine topologies: use sequential stages within a hierarchical supervisor, or use peer consensus within a graph-based framework to handle conditional branches. The key insight is that topology selection shapes latency, cost, and failure modes; misaligned topology and problem structure lead to poor performance~\cite{Anthropic2024b}.

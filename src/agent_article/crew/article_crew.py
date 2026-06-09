@@ -1,7 +1,6 @@
 """Article-writing CrewAI crew — sequential 3-agent phase + parallel LaTeX phase."""
 from __future__ import annotations
 
-import os
 import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
@@ -13,6 +12,7 @@ from crewai import Crew, Process
 from agent_article.agents.editor_agent import EditorAgent
 from agent_article.agents.researcher_agent import ResearcherAgent
 from agent_article.agents.writer_agent import WriterAgent
+from agent_article.crew.prompt_builder import build_prompt
 from agent_article.shared.config import cfg
 from agent_article.shared.logging_fifo import StructuredLogger
 from agent_article.tasks.article_tasks import (
@@ -29,12 +29,11 @@ _log = StructuredLogger("crew")
 
 
 def _clean_latex(raw: str) -> str:
-    """Strip markdown fences and leading/trailing prose; return clean LaTeX/BibTeX."""
+    """Strip markdown fences and leading prose; return clean LaTeX/BibTeX or ''."""
     lines = raw.splitlines()
     start, end, open_fence = 0, len(lines), -1
     for i, line in enumerate(lines):
-        stripped = line.strip()
-        if stripped.startswith("```"):
+        if line.strip().startswith("```"):
             if open_fence < 0:
                 open_fence = i
                 start = i + 1
@@ -47,8 +46,6 @@ def _clean_latex(raw: str) -> str:
                 start = i
                 break
         else:
-            # No LaTeX/BibTeX content found at all — return empty to prevent
-            # writing a Markdown prose file that breaks compilation.
             return ""
     return "\n".join(lines[start:end]).strip()
 
@@ -79,44 +76,46 @@ class ArticleCrew:
         self._workspace = Path(cfg("setup", "workspace_dir", "workspace"))
         self._workspace.mkdir(parents=True, exist_ok=True)
 
-    def _build_prompt(self, task: Task) -> str:
-        """Combine task description with context outputs (editor's content)."""
-        prompt = task.description
-        for ctx in task.context or []:
-            output = getattr(ctx, "output", None)
-            raw_ctx = getattr(output, "raw", None) if output else None
-            if raw_ctx:
-                prompt = f"{prompt}\n\nContext from previous task:\n{raw_ctx}"
-        return prompt
-
-    def _run_single_latex_task(self, task: Task) -> str:
+    def _run_single_latex_task(self, task: Task, retries: int = 2) -> str:
         tid = threading.current_thread().name
         out_path = task.output_file or ""
         _log.info(f"[{tid}] latex task start: {out_path}")
-        try:
-            prompt = self._build_prompt(task)
-            raw = task.agent.llm.call(prompt)
-            clean = _clean_latex(raw)
-            if out_path:
-                Path(out_path).parent.mkdir(parents=True, exist_ok=True)
-                Path(out_path).write_text(clean, encoding="utf-8")
-            _log.info(f"[{tid}] latex task done: {out_path}")
-            return out_path
-        except Exception as exc:
-            _log.error(f"[{tid}] latex task failed {out_path}: {exc}")
-            return ""
+        for attempt in range(retries + 1):
+            try:
+                prompt = build_prompt(task)
+                raw = task.agent.llm.call(prompt)
+                clean = _clean_latex(raw)
+                if not clean:
+                    preview = (raw[:300].replace("\n", " ")) if raw else "<empty>"
+                    _log.warning(f"[{tid}] attempt {attempt + 1}: empty LaTeX {out_path}. raw={preview!r}")
+                    if attempt < retries:
+                        continue
+                    _log.error(f"[{tid}] all retries exhausted {out_path}")
+                    return ""
+                if out_path:
+                    Path(out_path).parent.mkdir(parents=True, exist_ok=True)
+                    Path(out_path).write_text(clean, encoding="utf-8")
+                _log.info(f"[{tid}] latex task done: {out_path}")
+                return out_path
+            except Exception as exc:
+                if attempt < retries:
+                    _log.warning(f"[{tid}] attempt {attempt + 1} failed {out_path}: {exc!r}, retrying")
+                else:
+                    _log.error(f"[{tid}] latex task failed {out_path}: {exc}")
+                    return ""
+        return ""
 
     def _run_latex_phase_parallel(self, tasks: list[Task]) -> list[str]:
         if not tasks:
             return []
-        max_w = min(len(tasks), os.cpu_count() or 4)
+        max_w = min(len(tasks), 4)
         _log.info(f"Parallel LaTeX phase: {len(tasks)} tasks, {max_w} workers")
         with ThreadPoolExecutor(max_workers=max_w) as pool:
             futures = {pool.submit(self._run_single_latex_task, t): t for t in tasks}
             return [f.result() for f in as_completed(futures)]
 
     def run(self) -> CrewResult:
-        """Execute the full pipeline: sequential 3-agent phase, parallel LaTeX phase."""
+        """Execute full pipeline: sequential 3-agent phase + parallel LaTeX phase."""
         _log.info(f"Starting crew run for topic={self._topic!r}")
         result = CrewResult()
         try:
@@ -156,7 +155,7 @@ class ArticleCrew:
         return result
 
     def _compile_pdf(self) -> Path | None:
-        """Run lualatex→biber→lualatex→lualatex and return the compiled PDF path."""
+        """Run lualatex→biber→lualatex→lualatex and return compiled PDF path."""
         from agent_article.tools.latex_compile import LaTeXCompileTool
         try:
             tool = LaTeXCompileTool()
