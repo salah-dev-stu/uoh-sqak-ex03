@@ -24,6 +24,22 @@ A CrewAI-powered multi-agent pipeline that researches, writes, edits, and compil
 
 ![Chapter 2 with TikZ diagram](assets/screenshots/pdf_p07.png)
 
+### Chapter 2 — Agent Communication Network Graph
+
+![Agent communication network](assets/screenshots/pdf_network.png)
+
+### Chapter 3 — Framework Radar Chart
+
+![Framework comparison radar chart](assets/screenshots/pdf_radar.png)
+
+### Chapter 4 — Token Consumption Heatmap
+
+![Token consumption heatmap](assets/screenshots/pdf_heatmap.png)
+
+### Chapter 6 — Token Flow Diagram
+
+![Token flow through pipeline](assets/screenshots/pdf_sankey.png)
+
 ### Chapter 4 — Math Formulas
 
 ![Chapter 4 with math formulas](assets/screenshots/pdf_p14.png)
