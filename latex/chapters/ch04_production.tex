@@ -15,6 +15,13 @@ To prevent runaway spending, production systems enforce a per-run token budget. 
 
 Beyond per-run budgets, rate limiting protects both the system and the LLM provider's rate limits. Anthropic's Claude API enforces per-minute request rate limits (e.g., 50 requests per minute for standard tier accounts). If a crew orchestrator spawns 20 parallel research agents, all querying Claude simultaneously, the system will hit rate limits and receive HTTP 429 responses. Production implementations use exponential backoff with jitter: on a 429 error, wait $2^{attempt}$ seconds plus random noise, then retry \cite{Segal2026}.
 
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.9\textwidth]{figures/token_heatmap.png}
+\caption{Token consumption heatmap across the four pipeline agents and four cost dimensions. Warmer colours indicate higher token usage; the Writer agent dominates completion tokens due to generating full chapter prose.}
+\label{fig:token-heatmap}
+\end{figure}
+
 \section{The Gatekeeper Pattern}
 
 All external API calls—LLM invocations, web searches, file system writes, LaTeX compilations—flow through a single Gatekeeper object. The Gatekeeper serves as a policy enforcement layer: it checks rate limits, enforces token budgets, logs invocations, and may block calls that violate security policies (e.g., queries that would leak sensitive data).
