@@ -1,21 +1,21 @@
 #!/usr/bin/env python3
 """Generate publication-quality figures for the LaTeX article."""
+# ruff: noqa: I001
 from __future__ import annotations
 
-import math
+import os; os.environ.setdefault("MPLBACKEND", "Agg")  # noqa: E702
 from pathlib import Path
+import matplotlib.pyplot as plt
+import networkx as nx
+import numpy as np
+import seaborn as sns
+from matplotlib.lines import Line2D
 
-import matplotlib
-
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt  # noqa: E402
-import numpy as np  # noqa: E402
-
-FIGURES_DIR = Path("latex/figures")
+FIGURES_DIR = Path(__file__).parent.parent / "latex" / "figures"
 
 
 def generate_heatmap() -> str:
-    import seaborn as sns
+    FIGURES_DIR.mkdir(parents=True, exist_ok=True)
     data = np.array([
         [3_200, 5_800, 12, 0],
         [5_100, 38_200, 8, 200],
@@ -26,7 +26,7 @@ def generate_heatmap() -> str:
     labels_x = ["Prompt\nTokens", "Completion\nTokens", "Tool\nCalls", "Retry\nOverhead"]
     fig, ax = plt.subplots(figsize=(9, 5))
     sns.heatmap(data, annot=True, fmt="d", cmap="YlOrRd", xticklabels=labels_x,
-                yticklabels=labels_y, ax=ax, linewidths=0.5, cbar_kws={"label": "Tokens"})
+                yticklabels=labels_y, ax=ax, linewidths=0.5, cbar_kws={"label": "Count / Tokens"})
     ax.set_title("Token Consumption per Agent and Pipeline Phase",
                  fontsize=13, fontweight="bold", pad=12)
     out = FIGURES_DIR / "token_heatmap.png"
@@ -36,10 +36,11 @@ def generate_heatmap() -> str:
 
 
 def generate_radar() -> str:
+    FIGURES_DIR.mkdir(parents=True, exist_ok=True)
     cats = ["Latency", "Token\nEfficiency", "Observability",
             "Extensibility", "BiDi\nSupport", "Ease of Use"]
     n_cats = len(cats)
-    angles = [n / n_cats * 2 * math.pi for n in range(n_cats)] + [0]
+    angles = [n / n_cats * 2 * np.pi for n in range(n_cats)] + [0]
     scores = {
         "CrewAI": [8, 8, 7, 9, 8, 9],
         "LangGraph": [6, 7, 9, 10, 5, 5],
@@ -65,6 +66,7 @@ def generate_radar() -> str:
 
 
 def generate_sankey() -> str:
+    FIGURES_DIR.mkdir(parents=True, exist_ok=True)
     stages = [
         ("Input\nPrompt", 1_000, "#78909C"),
         ("Researcher\nAgent", 8_500, "#1565C0"),
@@ -99,8 +101,7 @@ def generate_sankey() -> str:
 
 
 def generate_network() -> str:
-    import networkx as nx
-    from matplotlib.lines import Line2D
+    FIGURES_DIR.mkdir(parents=True, exist_ok=True)
     graph = nx.DiGraph()
     agent_cfg: dict[str, tuple[int, str]] = {
         "Researcher": (2000, "#1565C0"), "Writer": (4000, "#2E7D32"),
@@ -141,7 +142,6 @@ def generate_network() -> str:
 
 
 def main() -> None:
-    FIGURES_DIR.mkdir(parents=True, exist_ok=True)
     for fn in [generate_heatmap, generate_radar, generate_sankey, generate_network]:
         print(f"Generated: {fn()}")
 
