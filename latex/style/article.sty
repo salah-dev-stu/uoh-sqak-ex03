@@ -78,6 +78,12 @@
 \newcommand{\hebrewdotleaders}{%
   \leaders\hbox{$\m@th\mkern 4.5mu.\mkern 4.5mu$}\hfill\nobreak}
 
+% Allow LaTeX to stretch inter-word space to avoid overfull lines
+\setlength{\emergencystretch}{3em}
+
+% Allow \texttt{} monospace text to break at word boundaries
+\RequirePackage[htt]{hyphenat}
+
 % Listings / code
 \RequirePackage{listings}
 \lstset{
