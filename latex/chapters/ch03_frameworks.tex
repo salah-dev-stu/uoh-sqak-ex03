@@ -52,6 +52,13 @@ AutoGen & Conversational agents with dialogue-driven orchestration, code executi
 \bottomrule
 \end{longtable}
 
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth]{figures/framework_radar.png}
+\caption{Multi-dimensional framework comparison across six production-readiness criteria (scores 0--10). Latency is inverted: a higher score means lower latency. Scores reflect the analysis in \S3.2--3.6.}
+\label{fig:framework-radar}
+\end{figure}
+
 The comparison reveals that framework selection should align with the problem's structure. Linear content generation (research \textminus{} write \textminus{} edit \textminus{} compile) maps naturally to CrewAI's sequential tasks. Conditional workflows with complex routing benefit from LangGraph's explicit DAG model. Exploratory research and interactive reasoning leverage AutoGen's conversational model.
 
 \section{Token Economy and Scalability}
