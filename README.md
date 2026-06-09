@@ -168,7 +168,7 @@ The generated PDF (`latex/output/uoh-sqak-article.pdf`) contains:
 | Gate | Status | Command |
 |---|---|---|
 | ruff lint (zero failures) | ✅ | `uv run ruff check src/ tests/` |
-| pytest ≥85% coverage | ✅ 89.77% | `uv run pytest --cov=src` |
+| pytest ≥85% coverage | ✅ 85.15% | `uv run pytest --cov=src` |
 | ≤150 lines per Python file | ✅ | `uv run python scripts/check_file_lines.py` |
 | Zero secrets in source | ✅ | `.env` in `.gitignore` |
 | uv only (no pip/venv) | ✅ | see `pyproject.toml` |
@@ -220,8 +220,8 @@ pre-commit run --all-files            # all hooks
 Version starts at `1.00`, incremented by `0.01` per change:
 ```python
 from agent_article.shared.version import VERSION, bump
-print(VERSION)          # "1.00"
-print(bump(VERSION))    # "1.01"
+print(VERSION)          # "1.05"
+print(bump(VERSION))    # "1.06"
 ```
 
 ---
