@@ -1,100 +1,78 @@
-\chapter{Agent Architectures and Topologies}
-\label{ch:architectures}
+\chapter{Agent Architectures and Topologies}\label{ch:architectures}
 
-Orchestration architectures differ primarily in how control and information flow between agents.
-Three canonical topologies cover most real deployments \cite{Segal2026}.
+\section{Linear Sequential Architecture}
+
+The simplest multi-agent topology chains agents in sequence, where each agent's output becomes the next agent's input. This research-write-edit pipeline is canonical in document generation: a researcher agent gathers information and sources, a writer agent synthesizes this research into prose, and an editor agent polishes the output for publication \cite{CrewAI2024}.
 
 \begin{figure}[H]
-  \centering
-  \resizebox{\textwidth}{!}{\input{figures/crew_architecture.tikz}}
-  \caption{The \texttt{CrewAI} multi-agent architecture: an orchestrator dispatches tasks to
-           specialist workers, each equipped with domain-specific tools.}
-  \label{fig:crew_architecture}
+\centering
+\resizebox{\textwidth}{!}{\input{figures/crew_architecture.tikz}}
+\caption{CrewAI multi-agent architecture.}
+\label{fig:crew_architecture}
 \end{figure}
 
-\section{Sequential Pipelines}
+Linear architectures excel for problems with clear sequential dependencies and well-defined handoff points. Each agent can focus on its specialized task without coordinating with others. However, sequential execution inherently limits parallelism---wall-clock time grows linearly with the number of stages, and any agent failure blocks downstream work. Token consumption is also predictable but potentially high, since each subsequent agent must consume prior outputs to maintain context \cite{LangChain2024a}.
 
-\textbf{Sequential pipelines} pass a work artifact from one agent to the next in a fixed order.
-Each agent transforms the artifact and hands it forward. The pattern is simple to reason about
-and debug, but any single agent's failure blocks the entire chain \cite{LangGraph2024}.
-
-For a pipeline of $N$ agents with individual latencies $\ell_1, \ell_2, \ldots, \ell_N$, the
-total end-to-end latency satisfies
-
+The latency of a sequential pipeline with $N$ agents is given by:
 \begin{equation}
-  L_{\mathrm{seq}} = \sum_{i=1}^{N} \ell_i + (N - 1)\,\delta
-  \label{eq:seq_latency}
+L_{\mathrm{seq}} = \sum_{i=1}^{N}\ell_i
+\label{eq:pipeline_latency}
 \end{equation}
+where $\ell_i$ represents the execution latency of agent $i$. This linear growth in latency motivates the hierarchical and parallel topologies discussed below.
 
-where $\delta$ denotes the artifact-transfer overhead between consecutive agents. The additive
-dependence on $N$ motivates shifting independent subtasks to parallel topologies whenever
-the task graph permits.
+\section{Hierarchical Manager-Worker Architecture}
 
-\section{Hierarchical Manager--Worker Architectures}
+Larger systems often employ hierarchical structures where a supervisor agent coordinates multiple specialist teams. The supervisor decomposes high-level goals into team assignments, monitors progress, arbitrates conflicts, and escalates blockers. This pattern scales well to large agent networks---the supervisor maintains responsibility for big-picture coordination while specialist teams focus on domain-specific execution.
 
-\textbf{Hierarchical (manager--worker) architectures} introduce an orchestrator agent that
-decomposes a goal into subtasks and dispatches them to worker agents. The orchestrator collects
-results, evaluates quality, and either accepts or re-dispatches \cite{CrewAI2024}. This mirrors
-how human organisations delegate work; both CrewAI and AutoGen implement this pattern as a
-first-class construct \cite{AutoGen2023}.
+Hierarchical architectures introduce communication overhead. The supervisor must maintain context across multiple teams, delegate intelligently, and synthesize results. Failure at the supervisor level cascades across the entire system. However, this structure mirrors human organizations and provides clear authority and decision-making paths, making orchestration logic more transparent \cite{CrewAI2024}.
 
-\section{Peer-to-Peer Meshes}
+\section{Peer-to-Peer and Consensus Architectures}
 
-\textbf{Peer-to-peer meshes} allow agents to call one another directly without a central
-co-ordinator. Emergent behaviour is possible, but observability and deadlock prevention become
-significant engineering challenges. The absence of a single control point makes formal
-verification of liveness properties considerably harder.
+For high-stakes decisions or complex reasoning, peer-to-peer architectures allow multiple agents to work independently on the same problem, then reach consensus through discussion or judgment. Each agent generates independent analysis, and a meta-agent evaluates proposals, identifies agreements and disagreements, and escalates controversial areas.
 
-\section{Hybrid Orchestrators}
+This approach leverages diverse reasoning styles to catch errors and oversights but multiplies token consumption---if five agents independently analyze a problem, the system pays five times the token cost. Consensus architectures are most valuable for critical decisions (technical architecture, risk assessment, content moderation) where the additional cost is justified by higher confidence in the outcome \cite{Anthropic2024b}.
 
-A hybrid approach---a thin orchestrator managing loosely coupled specialist agents---balances
-control with flexibility and is the dominant pattern in production systems today
-\cite{LangGraph2024}. The orchestrator retains global state and task-routing logic while each
-worker operates independently, enabling partial retries without replaying the full pipeline.
+\section{Tool-Augmented Specialist Topologies}
 
-\section{Topology Comparison}
+Agents with access to specialized tools (code execution, scientific APIs, database queries, web search) can solve problems beyond pure reasoning. A code-generation agent becomes more capable when it can execute and test code. A data-analysis agent with SQL and statistical packages can verify hypotheses against real data. A research agent with academic database access can cite authoritative sources \cite{LangChain2024a}.
 
-Table~\ref{tab:topologies} summarises the key trade-offs across the four principal topologies.
+Tool augmentation shifts the bottleneck from reasoning capability to tool availability and security. Specialized tools enable concrete outputs but require careful sandboxing to prevent misuse. Tool integration also introduces new failure modes---API rate limits, authentication timeouts, tool execution failures---that orchestration must handle gracefully.
 
-\begin{longtable}{@{}p{3.2cm}p{3cm}p{1.8cm}p{3.5cm}p{2.5cm}@{}}
-  \caption{Comparison of multi-agent orchestration topologies.}
-  \label{tab:topologies}\\
-  \toprule
-  \textbf{Architecture} & \textbf{Control} & \textbf{Parallelism} &
-  \textbf{Failure Blast Radius} & \textbf{Observability} \\
-  \midrule
-  \endfirsthead
-  \multicolumn{5}{c}{\tablename\ \thetable{} -- \textit{continued}}\\
-  \toprule
-  \textbf{Architecture} & \textbf{Control} & \textbf{Parallelism} &
-  \textbf{Failure Blast Radius} & \textbf{Observability} \\
-  \midrule
-  \endhead
-  \midrule
-  \multicolumn{5}{r}{\textit{continued on next page}}\\
-  \endfoot
-  \bottomrule
-  \endlastfoot
-  Sequential Pipeline   & Implicit / order  & Low    & High (blocks chain)   & Easy   \\
-  Hierarchical Manager  & Centralised       & Medium & Contained per subtask & Medium \\
-  Peer-to-Peer Mesh     & Distributed       & High   & Unpredictable         & Hard   \\
-  Hybrid Orchestrator   & Semi-centralised  & High   & Scoped                & Good   \\
+\section{Topology Comparison and Selection}
+
+\begin{longtable}{|p{1.8cm}|p{2.1cm}|p{2.1cm}|p{2.1cm}|p{2.3cm}|}
+\caption{Multi-agent orchestration topologies: characteristics and use cases.} \\
+\hline
+\textbf{Topology} & \textbf{Latency} & \textbf{Parallelism} & \textbf{Complexity} & \textbf{Ideal For} \\
+\hline
+\endfirsthead
+\multicolumn{5}{c}{{\bfseries \tablename~\thetable~(continued)}} \\
+\hline
+\textbf{Topology} & \textbf{Latency} & \textbf{Parallelism} & \textbf{Complexity} & \textbf{Ideal For} \\
+\hline
+\endhead
+\hline
+\endfoot
+\hline
+\endlastfoot
+Sequential & $\sum \ell_i$ (linear in stages) & None; strict ordering & Low & Well-defined workflows: research\,-\,write\,-\,edit \\
+\hline
+Hierarchical & $O(\ell_{\mathrm{super}} + \max_i \ell_i)$ per round & Moderate; teams parallel under supervisor & Medium & Large organizations; clear team boundaries \\
+\hline
+Peer-to-Peer & $O(N \cdot \ell_i)$ sequential or $O(\max \ell_i)$ parallel & High when parallel; meta-agent merges results & High & Critical decisions; high confidence required \\
+\hline
+Tool\-Augmented & $O(\ell_{\mathrm{agent}} + \ell_{\mathrm{tool}})$ & Depends on tool concurrency & Medium & Concrete problems; external APIs; verification \\
+\hline
 \end{longtable}
 
-\section{Cost and Topology Selection}
+\section{State Management Across Topologies}
 
-Choosing a topology is an early architectural decision with long-term consequences for
-testability, latency, and cost. The expected inference cost $C$ of a manager--worker pipeline
-with $K$ parallel workers is
+Regardless of topology, state management is critical. In linear architectures, state flows forward---researcher findings become writer input. In hierarchical systems, state must be available at multiple levels---supervisors need summaries while specialist teams need detailed context. In peer-to-peer architectures, state consistency across agents is challenging; different agents may have contradictory understandings until consensus is reached.
 
-\begin{equation}
-  C = \sum_{k=1}^{K}\!\bigl(c_{\mathrm{in}}\,t_{k}^{\mathrm{in}}
-      + c_{\mathrm{out}}\,t_{k}^{\mathrm{out}}\bigr) + C_{\mathrm{orch}}
-  \label{eq:cost_model}
-\end{equation}
+Explicit state management (as in \textit{LangGraph}) makes these differences visible and testable. Implicit state management (as in simpler frameworks) requires careful architectural discipline to prevent information loss, state inconsistency, or excessive context accumulation. The choice of topology should be informed by state management complexity and the system's tolerance for eventual consistency versus strong agreement \cite{LangGraph2024}.
 
-where $c_{\mathrm{in}}$ and $c_{\mathrm{out}}$ are the per-token input and output prices,
-$t_{k}^{\mathrm{in}}$ and $t_{k}^{\mathrm{out}}$ are the token counts for worker~$k$, and
-$C_{\mathrm{orch}}$ is the orchestrator's own inference cost \cite{Segal2026}. Minimising $C$
-under a quality constraint is the central optimisation problem of production multi-agent
-engineering.
+\section{Architectural Selection Guidelines}
+
+Selecting the optimal topology requires balancing latency, parallelism, complexity, and problem characteristics. Sequential topologies minimize architectural complexity and work well for tightly coupled workflows with clear handoffs. Hierarchical topologies scale to larger agent teams but introduce supervisor overhead. Peer-to-peer topologies maximize confidence in critical decisions at the cost of token efficiency and coordination complexity. Tool-augmented topologies enable concrete problem-solving by grounding agents in external verifiable data sources.
+
+The decision tree is straightforward: if tasks have clear sequential ordering and tight coupling, choose sequential; if the problem naturally decomposes into independent teams, choose hierarchical; if correctness matters more than cost, choose peer-to-peer with consensus; if grounding and verification are essential, augment selected agents with specialized tools \cite{CrewAI2024}.
