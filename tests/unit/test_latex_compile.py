@@ -66,6 +66,24 @@ def test_raises_on_nonzero_returncode(tmp_path) -> None:
         LaTeXCompileTool(latex_dir=latex_dir).run("main.tex")
 
 
+def test_check_log_warns_on_rerun(tmp_path) -> None:
+    from agent_article.tools.latex_compile import LaTeXCompileTool
+    latex_dir = tmp_path / "latex4"
+    latex_dir.mkdir()
+    log = latex_dir / "main.log"
+    log.write_text("Rerun to get cross-references right\nOverfull \\hbox bla", encoding="utf-8")
+    tool = LaTeXCompileTool(latex_dir=latex_dir)
+    tool._check_log(log)
+
+
+def test_check_log_missing_file(tmp_path) -> None:
+    from agent_article.tools.latex_compile import LaTeXCompileTool
+    latex_dir = tmp_path / "latex5"
+    latex_dir.mkdir()
+    tool = LaTeXCompileTool(latex_dir=latex_dir)
+    tool._check_log(latex_dir / "nonexistent.log")
+
+
 def test_tool_name(tmp_path) -> None:
     from agent_article.tools.latex_compile import LaTeXCompileTool
     latex_dir = tmp_path / "latex3"

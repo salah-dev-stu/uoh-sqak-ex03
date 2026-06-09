@@ -110,30 +110,26 @@ def test_clean_latex_passthrough():
 
 
 def test_build_prompt_no_context(tmp_path, monkeypatch):
-    _mk_cfg(tmp_path)
-    monkeypatch.setattr(cfg_mod, "_CONFIG_DIR", tmp_path / "config")
-    from agent_article.crew.article_crew import ArticleCrew
+    from agent_article.crew.prompt_builder import build_prompt
 
-    crew = ArticleCrew("test")
     task = MagicMock()
     task.description = "Write chapter 1"
     task.context = []
-    assert crew._build_prompt(task) == "Write chapter 1"
+    task.output_file = ""
+    assert build_prompt(task) == "Write chapter 1"
 
 
 def test_build_prompt_injects_context(tmp_path, monkeypatch):
-    _mk_cfg(tmp_path)
-    monkeypatch.setattr(cfg_mod, "_CONFIG_DIR", tmp_path / "config")
-    from agent_article.crew.article_crew import ArticleCrew
+    from agent_article.crew.prompt_builder import build_prompt
 
-    crew = ArticleCrew("test")
     ctx_task = MagicMock()
     ctx_task.output = MagicMock()
-    ctx_task.output.raw = "editor output here"
+    ctx_task.output.raw = "## **ch01_edited**\neditor output here"
     task = MagicMock()
     task.description = "Write chapter 1"
     task.context = [ctx_task]
-    prompt = crew._build_prompt(task)
+    task.output_file = "latex/chapters/ch01_introduction.tex"
+    prompt = build_prompt(task)
     assert "Write chapter 1" in prompt
     assert "editor output here" in prompt
 

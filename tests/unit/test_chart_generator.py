@@ -57,6 +57,20 @@ def test_line_chart(tmp_path) -> None:
     assert (out / "l.png").exists()
 
 
+def test_pie_chart(tmp_path) -> None:
+    from agent_article.tools.chart_generator import ChartGeneratorTool
+    out = tmp_path / "figs3"
+    ChartGeneratorTool(output_dir=out).run("pie", "P", ["A", "B"], [30, 70], "", "p.png")
+    assert (out / "p.png").exists()
+
+
+def test_unknown_chart_type_falls_back_to_bar(tmp_path) -> None:
+    from agent_article.tools.chart_generator import ChartGeneratorTool
+    out = tmp_path / "figs4"
+    ChartGeneratorTool(output_dir=out).run("scatter", "S", ["X"], [1], "Y", "s.png")
+    assert (out / "s.png").exists()
+
+
 def test_tool_name(tmp_path) -> None:
     from agent_article.tools.chart_generator import ChartGeneratorTool
     assert ChartGeneratorTool(output_dir=tmp_path).name == "chart_generator"

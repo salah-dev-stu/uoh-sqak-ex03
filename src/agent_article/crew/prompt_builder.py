@@ -42,14 +42,14 @@ def extract_chapter_excerpt(raw_ctx: str, out_path: str) -> str:
     if start_idx < 0:
         return raw_ctx
     end_idx = next(
-        (i for i in range(start_idx + 4, len(lines))
+        (i for i in range(start_idx + 1, len(lines))
          if any(lines[i].startswith(p) for p in _NEXT_SECTION_PREFIXES)),
         len(lines),
     )
     return "\n".join(lines[start_idx:end_idx])
 
 
-def build_prompt(task: "Task") -> str:
+def build_prompt(task: Task) -> str:
     """Combine task description with a capped, chapter-targeted context excerpt."""
     prompt = task.description
     out_path = task.output_file or ""
