@@ -20,7 +20,7 @@ class LaTeXAgent(BaseAgent):
     Setup:  config/agents.json::latex_producer, latex_skill/SKILL.md
     """
 
-    def __init__(self) -> None:
+    def __init__(self, model: str | None = None) -> None:
         super().__init__(
             config_key="latex_producer",
             tools=[
@@ -29,6 +29,7 @@ class LaTeXAgent(BaseAgent):
                 LaTeXCompileTool(),
                 ChartGeneratorTool(),
             ],
+            model_override=model,
         )
 
     def build(self) -> Agent:

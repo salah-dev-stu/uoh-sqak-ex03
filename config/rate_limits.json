@@ -1,12 +1,14 @@
 {
-  "version": "1.00",
+  "version": "1.01",
   "services": {
     "claude_cli": {
       "requests_per_minute": 10,
       "tokens_per_article": 200000,
       "tokens_per_day": 500000,
       "warn_at_percent": 75,
-      "hard_cap_percent": 95
+      "hard_cap_percent": 95,
+      "haiku_timeout_seconds": 300,
+      "sonnet_timeout_seconds": 600
     },
     "duckduckgo": {
       "requests_per_minute": 5

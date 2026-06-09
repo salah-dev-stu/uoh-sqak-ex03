@@ -67,8 +67,8 @@ def build_edit_task(agent: "BaseAgent", context: list[Task]) -> Task:
     )
 
 
-# Per-chapter LaTeX conversion tasks — each has output_file so CrewAI writes
-# the agent's Final Answer directly to disk without needing a tool call.
+# Per-chapter LaTeX conversion tasks — each has output_file so the parallel
+# runner writes the agent's Final Answer directly to disk.
 _LATEX_CHAPTERS = [
     ("latex_ch01", "latex/chapters/ch01_introduction.tex"),
     ("latex_ch02", "latex/chapters/ch02_architectures.tex"),
@@ -80,30 +80,30 @@ _LATEX_CHAPTERS = [
 ]
 
 
-def build_latex_tasks(agent: "BaseAgent", context: list[Task]) -> list[Task]:
+def build_latex_tasks(context: list[Task]) -> list[Task]:
     """
     Input:  edit task context (6 edited chapters)
-    Output: list[Task] — one per chapter + bibliography, each with output_file
+    Output: list[Task] — one per chapter + bib, each with output_file and
+            a per-task model override from config/tasks.json
     Setup:  config/tasks.json::latex_ch01..latex_bib
     """
+    from agent_article.agents.latex_agent import LaTeXAgent
+    task_cfgs = cfg("tasks", "tasks", {})
+    default_model = cfg("setup", "default_model", "claude-haiku-4-5-20251001")
     tasks: list[Task] = []
-    agent_obj = agent.build()
     for cfg_key, output_path in _LATEX_CHAPTERS:
-        desc = _task_cfg(cfg_key, "description")
-        expected = _task_cfg(cfg_key, "expected_output")
-        _log.info(f"Building latex task key={cfg_key!r} output={output_path!r}")
+        task_conf = task_cfgs.get(cfg_key, {})
+        model = task_conf.get("model") or default_model
+        desc = str(task_conf.get("description", ""))
+        expected = str(task_conf.get("expected_output", ""))
+        agent_obj = LaTeXAgent(model=model).build()
+        _log.info(f"Building latex task key={cfg_key!r} model={model!r} output={output_path!r}")
         task = Task(
             description=desc,
             expected_output=expected,
             agent=agent_obj,
-            context=context if not tasks else [tasks[-1]],
+            context=context,
             output_file=output_path,
         )
         tasks.append(task)
     return tasks
-
-
-# Keep old name as alias so any external callers don't break immediately.
-def build_latex_task(agent: "BaseAgent", context: list[Task]) -> Task:
-    """Deprecated — use build_latex_tasks() which returns a list."""
-    return build_latex_tasks(agent, context)[0]

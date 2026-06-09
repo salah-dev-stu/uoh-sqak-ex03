@@ -1,11 +1,16 @@
-"""Article-writing CrewAI crew — sequential 4-agent pipeline."""
+"""Article-writing CrewAI crew — sequential 3-agent phase + parallel LaTeX phase."""
+from __future__ import annotations
+
+import os
+import threading
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from crewai import Crew, Process
 
 from agent_article.agents.editor_agent import EditorAgent
-from agent_article.agents.latex_agent import LaTeXAgent
 from agent_article.agents.researcher_agent import ResearcherAgent
 from agent_article.agents.writer_agent import WriterAgent
 from agent_article.shared.config import cfg
@@ -17,7 +22,31 @@ from agent_article.tasks.article_tasks import (
     build_write_task,
 )
 
+if TYPE_CHECKING:
+    from crewai import Task
+
 _log = StructuredLogger("crew")
+
+
+def _clean_latex(raw: str) -> str:
+    """Strip markdown fences and leading/trailing prose; return clean LaTeX/BibTeX."""
+    lines = raw.splitlines()
+    start, end, open_fence = 0, len(lines), -1
+    for i, line in enumerate(lines):
+        stripped = line.strip()
+        if stripped.startswith("```"):
+            if open_fence < 0:
+                open_fence = i
+                start = i + 1
+            else:
+                end = i
+                break
+    if open_fence < 0:
+        for i, line in enumerate(lines):
+            if line.strip().startswith(("%", "\\", "@")):
+                start = i
+                break
+    return "\n".join(lines[start:end]).strip()
 
 
 @dataclass
@@ -46,40 +75,58 @@ class ArticleCrew:
         self._workspace = Path(cfg("setup", "workspace_dir", "workspace"))
         self._workspace.mkdir(parents=True, exist_ok=True)
 
-    def _build_crew(self) -> Crew:
-        researcher = ResearcherAgent()
-        writer = WriterAgent()
-        editor = EditorAgent()
-        latex = LaTeXAgent()
+    def _run_single_latex_task(self, task: Task) -> str:
+        tid = threading.current_thread().name
+        out_path = task.output_file or ""
+        _log.info(f"[{tid}] latex task start: {out_path}")
+        try:
+            raw = task.agent.llm.call(task.description)
+            clean = _clean_latex(raw)
+            if out_path:
+                Path(out_path).parent.mkdir(parents=True, exist_ok=True)
+                Path(out_path).write_text(clean, encoding="utf-8")
+            _log.info(f"[{tid}] latex task done: {out_path}")
+            return out_path
+        except Exception as exc:
+            _log.error(f"[{tid}] latex task failed {out_path}: {exc}")
+            return ""
 
-        t_research = build_research_task(researcher, self._topic)
-        t_write = build_write_task(writer, self._topic, [t_research])
-        t_edit = build_edit_task(editor, [t_write])
-        latex_tasks = build_latex_tasks(latex, [t_edit])
-
-        all_tasks = [t_research, t_write, t_edit, *latex_tasks]
-        return Crew(
-            agents=[researcher.build(), writer.build(), editor.build(), latex.build()],
-            tasks=all_tasks,
-            process=Process.sequential,
-            verbose=True,
-            respect_context_window=True,
-        )
+    def _run_latex_phase_parallel(self, tasks: list[Task]) -> list[str]:
+        max_w = min(len(tasks), os.cpu_count() or 4)
+        _log.info(f"Parallel LaTeX phase: {len(tasks)} tasks, {max_w} workers")
+        with ThreadPoolExecutor(max_workers=max_w) as pool:
+            futures = {pool.submit(self._run_single_latex_task, t): t for t in tasks}
+            return [f.result() for f in as_completed(futures)]
 
     def run(self) -> CrewResult:
-        """Execute the full 4-agent pipeline and return the result."""
+        """Execute the full pipeline: sequential 3-agent phase, parallel LaTeX phase."""
         _log.info(f"Starting crew run for topic={self._topic!r}")
         result = CrewResult()
         try:
-            crew = self._build_crew()
-            output = crew.kickoff()
+            researcher = ResearcherAgent()
+            writer = WriterAgent()
+            editor = EditorAgent()
+
+            t_research = build_research_task(researcher, self._topic)
+            t_write = build_write_task(writer, self._topic, [t_research])
+            t_edit = build_edit_task(editor, [t_write])
+
+            seq_crew = Crew(
+                agents=[researcher.build(), writer.build(), editor.build()],
+                tasks=[t_research, t_write, t_edit],
+                process=Process.sequential,
+                verbose=True,
+                respect_context_window=True,
+            )
+            output = seq_crew.kickoff()
             result.raw_output = str(output)
+
+            latex_tasks = build_latex_tasks([t_edit])
+            self._run_latex_phase_parallel(latex_tasks)
+
+            compiled = self._compile_pdf()
             output_filename = cfg("setup", "output_filename", "uoh-sqak-article.pdf")
             pdf_path = Path("latex/output") / output_filename
-            # Agents may not call file tools (claude -p bypasses ReAct tool loop).
-            # Compile explicitly from the latex/ directory to guarantee a fresh PDF.
-            _log.info("Post-crew: running LaTeX compilation pass")
-            compiled = self._compile_pdf()
             if compiled:
                 import shutil
                 shutil.copy2(compiled, pdf_path)

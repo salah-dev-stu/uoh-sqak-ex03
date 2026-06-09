@@ -7,7 +7,24 @@ from typing import Any
 from crewai.llms.base_llm import BaseLLM
 from pydantic import model_validator
 
-_DEFAULT_MODEL = "claude-sonnet-4-6"
+
+def _default_model() -> str:
+    try:
+        from agent_article.shared.config import cfg
+        return cfg("setup", "default_model", "claude-haiku-4-5-20251001")
+    except Exception:
+        return "claude-haiku-4-5-20251001"
+
+
+def _timeout_for_model(model: str) -> int:
+    try:
+        from agent_article.shared.config import cfg
+        svc = cfg("rate_limits", "services", {}).get("claude_cli", {})
+        if "sonnet" in model or "opus" in model:
+            return int(svc.get("sonnet_timeout_seconds", 600))
+        return int(svc.get("haiku_timeout_seconds", 300))
+    except Exception:
+        return 600
 
 
 class ClaudeCLILLM(BaseLLM):
@@ -17,17 +34,19 @@ class ClaudeCLILLM(BaseLLM):
     Setup:  claude CLI must be logged in (claude --login)
     """
 
-    timeout: int = 1200
+    timeout: int = 600
     llm_type: str = "claude-cli"
 
     @model_validator(mode="before")
     @classmethod
-    def _set_model_default(cls, data: Any) -> Any:
+    def _set_defaults(cls, data: Any) -> Any:
         if isinstance(data, dict):
             if not data.get("model"):
-                data["model"] = _DEFAULT_MODEL
+                data["model"] = _default_model()
             if "temperature" not in data:
                 data["temperature"] = 0
+            if "timeout" not in data:
+                data["timeout"] = _timeout_for_model(data.get("model", ""))
         return data
 
     def call(self, messages: str | list[Any], tools: list | None = None, **kwargs: Any) -> str:
@@ -49,9 +68,6 @@ class ClaudeCLILLM(BaseLLM):
         if result.returncode != 0:
             raise RuntimeError(f"claude CLI failed: {result.stderr[:500]}")
         output = result.stdout.strip()
-        # CrewAI injects "\nObservation:" as a stop sequence for the ReAct loop.
-        # claude -p runs to completion so we truncate manually so CrewAI can
-        # execute the real tool instead of the model's fabricated observation.
         for stop_seq in (getattr(self, "stop", None) or []):
             if stop_seq in output:
                 output = output[: output.index(stop_seq)]

@@ -1,10 +1,11 @@
 {
-  "version": "1.00",
+  "version": "1.01",
   "package": "agent_article",
   "workspace_dir": "workspace",
   "results_dir": "results",
   "latex_dir": "latex",
   "output_filename": "uoh-sqak-article.pdf",
   "default_topic": "Multi-Agent Orchestration Patterns",
-  "group_code": "uoh-sqak"
+  "group_code": "uoh-sqak",
+  "default_model": "claude-haiku-4-5-20251001"
 }

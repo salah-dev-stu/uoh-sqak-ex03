@@ -16,10 +16,16 @@ class BaseAgent(ABC):
     Setup:  config/agents.json, skills/<config_key>/SKILL.md
     """
 
-    def __init__(self, config_key: str, tools: list[BaseTool]) -> None:
+    def __init__(
+        self,
+        config_key: str,
+        tools: list[BaseTool],
+        model_override: str | None = None,
+    ) -> None:
         self._cfg = get_config("agents")["agents"][config_key]
         self._skill = FileSkill(self._cfg["skill_ref"])
         self._tools = tools
+        self._model_override = model_override
 
     @abstractmethod
     def build(self) -> Agent: ...
@@ -29,6 +35,8 @@ class BaseAgent(ABC):
         llm_key = self._cfg.get("llm", "claude-cli")
         if llm_key == "claude-cli":
             from agent_article.shared.claude_cli_llm import ClaudeCLILLM
+            if self._model_override:
+                return ClaudeCLILLM(model=self._model_override)
             return ClaudeCLILLM()
         return None
 
