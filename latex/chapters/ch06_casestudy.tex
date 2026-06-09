@@ -67,19 +67,20 @@ The pipeline required agents to use standardized citation keys ([AuthorYear] for
 
 \section{Pipeline Metrics}
 
-\begin{longtable}{@{}lp{2.5cm}p{5cm}@{}}
+\begin{longtable}{@{}p{4cm}p{3cm}p{6.5cm}@{}}
+\toprule
 \textbf{Metric} & \textbf{Value} & \textbf{Notes} \\
-\hline
+\midrule
 \endhead
-\hline
+\bottomrule
 \endlastfoot
 Pipeline Agents & 4 & Researcher, Writer, Editor, LaTeX Compiler; sequential execution \\
 Tasks Defined & 11 & 2--3 tasks per agent; clearly scoped with success criteria \\
 Chapters Generated & 6 & Introduction, Architectures, Frameworks, Production, BiDi, Case Study \\
-LaTeX Passes & 4 & 2 LuaLaTeX passes \textplus{} 1 biber pass \textplus{} 1 final pass for cross-refs \\
+LaTeX Passes & 4 & pass 1 + biber + pass 2 + pass 3 for cross-refs \\
 Target PDF Length & 20 pages & 15-page minimum per spec; 20-page target with figures, tables \\
 Elapsed Time (Fast) & $<$10 min & With cached research, parallel pre-work, optimized LLM sampling \\
-Python Files & $\leq 16$ & SDK \textplus{} agents \textplus{} tasks \textplus{} tools; enforces 150-line limit \\
+Python Files & $\leq 16$ & SDK + agents + tasks + tools; enforces 150-line limit \\
 Test Coverage & $\geq 85\%$ & Integration tests exercise full pipeline with mock LLM responses \\
 \end{longtable}
 

@@ -1,4 +1,4 @@
 """agent_article — HW3 CrewAI article generation pipeline."""
 
-__version__ = "1.05"
+__version__ = "1.06"
 __all__ = ["ArticleSDK"]

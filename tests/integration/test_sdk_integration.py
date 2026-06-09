@@ -50,11 +50,10 @@ def test_sdk_generate_returns_result(full_env):
     with patch.object(cm, "ResearcherAgent", return_value=MagicMock()),\
          patch.object(cm, "WriterAgent", return_value=MagicMock()),\
          patch.object(cm, "EditorAgent", return_value=MagicMock()),\
-         patch.object(cm, "LaTeXAgent", return_value=MagicMock()),\
          patch.object(cm, "build_research_task", return_value=MagicMock()),\
          patch.object(cm, "build_write_task", return_value=MagicMock()),\
          patch.object(cm, "build_edit_task", return_value=MagicMock()),\
-         patch.object(cm, "build_latex_task", return_value=MagicMock()),\
+         patch.object(cm, "build_latex_tasks", return_value=[]),\
          patch.object(cm, "Crew") as mock_crew:
         mock_crew.return_value.kickoff.return_value = "done"
         sdk = ArticleSDK()

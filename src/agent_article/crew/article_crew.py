@@ -103,6 +103,8 @@ class ArticleCrew:
             return ""
 
     def _run_latex_phase_parallel(self, tasks: list[Task]) -> list[str]:
+        if not tasks:
+            return []
         max_w = min(len(tasks), os.cpu_count() or 4)
         _log.info(f"Parallel LaTeX phase: {len(tasks)} tasks, {max_w} workers")
         with ThreadPoolExecutor(max_workers=max_w) as pool:

@@ -10,7 +10,7 @@ def test_version_format() -> None:
 
 
 def test_version_starts_at_1_00() -> None:
-    assert VERSION == "1.05"
+    assert VERSION == "1.06"
 
 
 def test_bump_increments_patch() -> None:
