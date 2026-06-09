@@ -94,7 +94,7 @@ def test_edit_task_built(tmp_path, monkeypatch):
     assert mock_task.called
 
 
-def test_build_latex_tasks_returns_seven(tmp_path, monkeypatch):
+def test_build_latex_tasks_returns_eight(tmp_path, monkeypatch):
     _mk_cfg(tmp_path)
     monkeypatch.setattr(cfg_mod, "_CONFIG_DIR", tmp_path / "config")
     import agent_article.tasks.article_tasks as at
@@ -102,7 +102,7 @@ def test_build_latex_tasks_returns_seven(tmp_path, monkeypatch):
          patch.object(at, "Task", return_value=MagicMock()):
         mock_la.return_value = _mock_agent()
         tasks = at.build_latex_tasks([MagicMock()])
-    assert len(tasks) == 7
+    assert len(tasks) == 8  # ch01–ch07 + bib
 
 
 def test_build_latex_tasks_ch05_uses_sonnet(tmp_path, monkeypatch):
@@ -136,6 +136,6 @@ def test_build_latex_tasks_default_uses_haiku(tmp_path, monkeypatch):
          patch.object(at, "Task", return_value=MagicMock()):
         at.build_latex_tasks([MagicMock()])
 
-    # ch01–ch04, ch06, bib should be haiku; only ch05 is sonnet
+    # ch01–ch04, ch06, ch07, bib should be haiku; only ch05 is sonnet
     haiku_count = sum(1 for m in models_used if m == "claude-haiku-4-5-20251001")
-    assert haiku_count == 6
+    assert haiku_count == 7

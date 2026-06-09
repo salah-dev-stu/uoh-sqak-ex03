@@ -83,3 +83,11 @@ def test_get_spend_report(gatekeeper) -> None:
 def test_unknown_service_uses_defaults(gatekeeper) -> None:
     result = gatekeeper.call("unknown_svc", lambda: "ok")
     assert result == "ok"
+
+
+def test_token_budget_exceeded(gatekeeper) -> None:
+    # tokens_per_article=1000, hard_cap_percent=95 → threshold = 950
+    gatekeeper._usage["test_svc"].tokens_in = 900
+    gatekeeper._usage["test_svc"].tokens_out = 60  # total = 960 >= 950
+    with pytest.raises(GatekeeperError, match="Token budget"):
+        gatekeeper.call("test_svc", lambda: None)

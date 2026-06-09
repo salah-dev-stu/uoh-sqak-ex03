@@ -76,6 +76,7 @@ _LATEX_CHAPTERS = [
     ("latex_ch04", "latex/chapters/ch04_production.tex"),
     ("latex_ch05", "latex/chapters/ch05_bidi.tex"),
     ("latex_ch06", "latex/chapters/ch06_casestudy.tex"),
+    ("latex_ch07", "latex/chapters/ch07_conclusion.tex"),
     ("latex_bib",  "latex/bib/references.bib"),
 ]
 
