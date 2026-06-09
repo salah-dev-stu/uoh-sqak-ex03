@@ -1,18 +1,15 @@
 """Article-writing CrewAI crew — sequential 3-agent phase + parallel LaTeX phase."""
 from __future__ import annotations
 
-import threading
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 from crewai import Crew, Process
 
 from agent_article.agents.editor_agent import EditorAgent
 from agent_article.agents.researcher_agent import ResearcherAgent
 from agent_article.agents.writer_agent import WriterAgent
-from agent_article.crew.prompt_builder import build_prompt
+from agent_article.crew.latex_runner import run_latex_phase_parallel
 from agent_article.shared.config import cfg
 from agent_article.shared.logging_fifo import StructuredLogger
 from agent_article.tasks.article_tasks import (
@@ -22,32 +19,7 @@ from agent_article.tasks.article_tasks import (
     build_write_task,
 )
 
-if TYPE_CHECKING:
-    from crewai import Task
-
 _log = StructuredLogger("crew")
-
-
-def _clean_latex(raw: str) -> str:
-    """Strip markdown fences and leading prose; return clean LaTeX/BibTeX or ''."""
-    lines = raw.splitlines()
-    start, end, open_fence = 0, len(lines), -1
-    for i, line in enumerate(lines):
-        if line.strip().startswith("```"):
-            if open_fence < 0:
-                open_fence = i
-                start = i + 1
-            else:
-                end = i
-                break
-    if open_fence < 0:
-        for i, line in enumerate(lines):
-            if line.strip().startswith(("%", "\\", "@")):
-                start = i
-                break
-        else:
-            return ""
-    return "\n".join(lines[start:end]).strip()
 
 
 @dataclass
@@ -76,44 +48,6 @@ class ArticleCrew:
         self._workspace = Path(cfg("setup", "workspace_dir", "workspace"))
         self._workspace.mkdir(parents=True, exist_ok=True)
 
-    def _run_single_latex_task(self, task: Task, retries: int = 2) -> str:
-        tid = threading.current_thread().name
-        out_path = task.output_file or ""
-        _log.info(f"[{tid}] latex task start: {out_path}")
-        for attempt in range(retries + 1):
-            try:
-                prompt = build_prompt(task)
-                raw = task.agent.llm.call(prompt)
-                clean = _clean_latex(raw)
-                if not clean:
-                    preview = (raw[:300].replace("\n", " ")) if raw else "<empty>"
-                    _log.warning(f"[{tid}] attempt {attempt + 1}: empty LaTeX {out_path}. raw={preview!r}")
-                    if attempt < retries:
-                        continue
-                    _log.error(f"[{tid}] all retries exhausted {out_path}")
-                    return ""
-                if out_path:
-                    Path(out_path).parent.mkdir(parents=True, exist_ok=True)
-                    Path(out_path).write_text(clean, encoding="utf-8")
-                _log.info(f"[{tid}] latex task done: {out_path}")
-                return out_path
-            except Exception as exc:
-                if attempt < retries:
-                    _log.warning(f"[{tid}] attempt {attempt + 1} failed {out_path}: {exc!r}, retrying")
-                else:
-                    _log.error(f"[{tid}] latex task failed {out_path}: {exc}")
-                    return ""
-        return ""
-
-    def _run_latex_phase_parallel(self, tasks: list[Task]) -> list[str]:
-        if not tasks:
-            return []
-        max_w = min(len(tasks), 4)
-        _log.info(f"Parallel LaTeX phase: {len(tasks)} tasks, {max_w} workers")
-        with ThreadPoolExecutor(max_workers=max_w) as pool:
-            futures = {pool.submit(self._run_single_latex_task, t): t for t in tasks}
-            return [f.result() for f in as_completed(futures)]
-
     def run(self) -> CrewResult:
         """Execute full pipeline: sequential 3-agent phase + parallel LaTeX phase."""
         _log.info(f"Starting crew run for topic={self._topic!r}")
@@ -138,7 +72,7 @@ class ArticleCrew:
             result.raw_output = str(output)
 
             latex_tasks = build_latex_tasks([t_edit])
-            self._run_latex_phase_parallel(latex_tasks)
+            run_latex_phase_parallel(latex_tasks)
 
             compiled = self._compile_pdf()
             output_filename = cfg("setup", "output_filename", "uoh-sqak-article.pdf")

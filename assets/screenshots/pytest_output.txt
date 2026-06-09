@@ -1,0 +1,20 @@
+src/agent_article/shared/config.py                14      0   100%
+src/agent_article/shared/gatekeeper.py            54      1    98%   61
+src/agent_article/shared/logging_fifo.py          44      6    86%   38-39, 54-57
+src/agent_article/shared/version.py                4      0   100%
+src/agent_article/skills/__init__.py               0      0   100%
+src/agent_article/skills/base_skill.py            18      0   100%
+src/agent_article/tasks/__init__.py                0      0   100%
+src/agent_article/tasks/article_tasks.py          39      0   100%
+src/agent_article/tools/__init__.py                0      0   100%
+src/agent_article/tools/base_tool.py              12      1    92%   32
+src/agent_article/tools/chart_generator.py        37      0   100%
+src/agent_article/tools/file_rw.py                37      0   100%
+src/agent_article/tools/latex_compile.py          46      0   100%
+src/agent_article/tools/web_search.py             22      0   100%
+----------------------------------------------------------------------------
+TOTAL                                            719     95    87%
+Required test coverage of 85.0% reached. Total coverage: 86.79%
+=========================== short test summary info ============================
+FAILED tests/integration/test_sdk_integration.py::test_sdk_generate_returns_result
+1 failed, 90 passed in 4.06s

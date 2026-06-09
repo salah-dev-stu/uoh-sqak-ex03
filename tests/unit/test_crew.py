@@ -70,7 +70,7 @@ def test_crew_run_success(tmp_path, monkeypatch):
         fake_pdf = tmp_path / "ws" / "main.pdf"
         fake_pdf.parent.mkdir(parents=True, exist_ok=True)
         fake_pdf.write_bytes(b"%PDF")
-        with patch.object(crew, "_run_latex_phase_parallel", return_value=[]), \
+        with patch.object(cm, "run_latex_phase_parallel", return_value=[]), \
              patch.object(crew, "_compile_pdf", return_value=fake_pdf):
             result = crew.run()
     assert result.success is True
@@ -98,18 +98,18 @@ def test_crew_result_defaults():
 
 
 def test_clean_latex_strips_fences():
-    from agent_article.crew.article_crew import _clean_latex
+    from agent_article.crew.latex_runner import clean_latex
     raw = "```latex\n\\chapter{Hello}\n```\nSome trailing text."
-    result = _clean_latex(raw)
+    result = clean_latex(raw)
     assert result.startswith("\\chapter{Hello}")
     assert "```" not in result
     assert "trailing" not in result
 
 
 def test_clean_latex_passthrough():
-    from agent_article.crew.article_crew import _clean_latex
+    from agent_article.crew.latex_runner import clean_latex
     raw = "\\chapter{Hello}\n\\section{World}"
-    assert _clean_latex(raw) == raw
+    assert clean_latex(raw) == raw
 
 
 def test_build_prompt_no_context(tmp_path, monkeypatch):
@@ -138,13 +138,9 @@ def test_build_prompt_injects_context(tmp_path, monkeypatch):
 
 
 def test_run_latex_phase_parallel_calls_all_tasks(tmp_path, monkeypatch):
-    _mk_cfg(tmp_path)
-    monkeypatch.setattr(cfg_mod, "_CONFIG_DIR", tmp_path / "config")
-    from agent_article.crew.article_crew import ArticleCrew
-
-    crew = ArticleCrew("test")
+    import agent_article.crew.latex_runner as lr
     called = []
-    with patch.object(crew, "_run_single_latex_task", side_effect=lambda t: called.append(t) or ""):
-        tasks = [MagicMock() for _ in range(7)]
-        crew._run_latex_phase_parallel(tasks)
+    monkeypatch.setattr(lr, "run_single_latex_task", lambda t, retries=2: called.append(t) or "")
+    tasks = [MagicMock() for _ in range(7)]
+    lr.run_latex_phase_parallel(tasks)
     assert len(called) == 7
