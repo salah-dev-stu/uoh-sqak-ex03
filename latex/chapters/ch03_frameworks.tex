@@ -1,54 +1,79 @@
 \chapter{Orchestration Frameworks}\label{ch:frameworks}
 
-The landscape of multi-agent orchestration frameworks has matured significantly, with multiple mature, production-ready options available to practitioners. Each framework embodies different design philosophies: CrewAI emphasizes role-based agents and structured processes; LangChain provides modular, composable primitives; LangGraph introduces explicit state machines; and Microsoft AutoGen focuses on conversational collaboration. This chapter surveys the four dominant frameworks and provides comparative analysis to guide architectural selection.
+\section{Framework Landscape}
+
+Three frameworks dominate the multi-agent orchestration landscape: CrewAI, LangChain, and LangGraph. Each reflects different design philosophies\cite{CrewAI2024}. CrewAI prioritizes prescriptive patterns and ease-of-use for standard workflows. LangChain emphasizes composability and flexibility through LCEL (LangChain Expression Language). LangGraph introduces explicit state management and graph-based execution models. Understanding the trade-offs between these frameworks is essential for selecting the right tool for a given problem.
+
+Additionally, Microsoft AutoGen provides a conversation-based approach where agents exchange messages in turns, offering a different perspective on multi-agent coordination\cite{AutoGen2023}. Each framework addresses core challenges in orchestration: task sequencing, state persistence, parallelism, tool integration, and observability.
 
 \section{LangChain and LCEL}
 
-LangChain, developed by Anthropic and the open-source community, pioneered the modular approach to agent orchestration. Rather than impose a specific architecture, LangChain provides low-level building blocks: Language Models (LMs), chains, memory abstractions, tools, and agent implementations. The core abstraction is the \texttt{Runnable}, a composable interface that accepts input and produces output. Chains are composed by piping Runnables together; LangChain Expression Language (LCEL) provides a concise syntax for chain composition.
+LangChain pioneered composable building blocks for language model applications\cite{LangChain2024a}. At its core is the LCEL (LangChain Expression Language), a declarative syntax for combining chains, prompts, and tools into complex pipelines. A typical LCEL chain connects a prompt template to a model, then routes output through parsing and tool invocation.
 
-\cite{LangChain2024a} documents the LCEL paradigm: chains are declaratively defined by composing primitives, enabling introspection, serialization, and batch processing. A research chain, for example, pipes a query router through a search tool, then through an LLM that synthesizes results. LangChain's strength lies in flexibility---engineers can build arbitrary topologies without framework constraints. The trade-off is verbosity: even simple chains require explicit definition of routing logic, error handling, and state management.
+LangChain's strength lies in flexibility: developers compose custom agents using lower-level primitives (agent executors, tool loops, memory strategies). This approach accommodates novel orchestration patterns and domain-specific requirements. For example, a research system might implement a web-search loop with semantic caching and hierarchical summarization—patterns not hard-coded into the framework.
 
-LangChain agents use the ReAct (Reasoning \& Acting) pattern, where an agent reasons about a problem, selects a tool, observes the result, and repeats until a stopping condition is met. This pattern is well-suited to open-ended problem solving but requires careful tuning of stopping criteria and token budgets to prevent runaway loops.
+The trade-off is increased architectural responsibility. Developers must design their own agent loops and state transitions, demanding expertise in multi-agent systems. Memory management requires selecting and configuring strategies (buffer, summary, vector store) appropriate for the use case. LangChain excels for custom and innovative workflows but steeper learning curves for standard patterns.
 
 \section{CrewAI Role-Based Agents}
 
-CrewAI, introduced in early 2024, takes a deliberate stance: agents are defined by role, goal, and backstory. A task specifies what work the agent performs and on what input. Processes (sequential, hierarchical, or custom callbacks) determine execution order. This opinionated design accelerates development---the framework provides sensible defaults for agent prompting, tool binding, and inter-agent communication.
+CrewAI adopts a prescriptive approach centered on agent teams. Each agent is defined by three attributes: \texttt{role} (job title), \texttt{goal} (what the agent aims to achieve), and \texttt{backstory} (persona and expertise). Teams are assembled with a process type (sequential, hierarchical, or consensus), and tasks are assigned to agents\cite{CrewAI2024}.
 
-\cite{CrewAI2024} emphasizes practical production patterns. Each agent's role is a natural language description of expertise; goal describes the desired outcome; backstory provides context that grounds the agent's reasoning. Tasks are defined declaratively, then bound to a Crew (a collection of agents). The framework automatically handles prompt assembly, tool invocation, and output validation. CrewAI's strength is rapid iteration: complex multi-agent pipelines can be prototyped in minutes. The trade-off is rigidity---custom topologies require callback-based process overrides, and debugging relies on log analysis rather than code introspection.
+This model is intuitive for research-writing-editing pipelines. A Researcher agent gathers information, a Writer agent produces narrative, an Editor agent refines prose, and a LaTeX Producer agent formats output. Task definitions specify input requirements, expected output, and the assigned agent. The framework handles agent invocation, memory management, and inter-agent communication.
+
+CrewAI prioritizes developer experience through clear patterns, reducing decision fatigue for standard workflows. Disadvantages include limited built-in parallelism (sequential process runs tasks serially) and manual state management for complex architectures. The framework is ideal for rapid development of known patterns.
 
 \section{LangGraph Stateful Graphs}
 
-LangGraph, developed by Anthropic, models agent orchestration as an explicit state machine represented as a directed acyclic graph (DAG). Nodes represent agents, decision points, or compute steps; edges represent state transitions and data flow. LangGraph provides explicit primitives for conditional branching, loops, synchronization, and error recovery.
+LangGraph represents orchestration as explicit state machines. Agents are nodes in a directed graph; edges define state transitions and routing logic. Each node is a function that reads state, invokes an action, and returns new state. Conditions on edges enable branching: if task A succeeds, route to task B; if it fails, route to error handling\cite{LangGraph2024}.
 
-\cite{LangGraph2024} details the state machine approach. A graph is defined by initial state, a set of node functions, and transition rules. Node functions receive the current state, perform computation, and return updated state. Conditional edges allow routing based on state inspection---if a Researcher agent produces low-confidence output, execution can loop back for refinement. This explicitness enables strong guarantees: deterministic replay, comprehensive error traces, and precise control over execution flow.
+This approach provides several advantages. State is visible and versioned, enabling precise debugging and state snapshots. Parallelism is explicit: multiple nodes can execute concurrently on independent paths that reconverge. Persistence is designed in from the start—state graphs can be serialized and resumed from checkpoints, enabling long-running workflows and failure recovery.
 
-LangGraph's strength lies in determinism and observability---every state transition is recorded and can be replayed. The trade-off is complexity: engineers must model their workflow as an explicit state machine, requiring more upfront design than CrewAI's implicit approaches. However, for mission-critical systems where reproducibility and auditability are paramount, this investment pays dividends.
+LangGraph's disadvantage is upfront modeling complexity. Developers must express orchestration as a state machine, which is powerful but requires architectural thinking. For straightforward sequential pipelines, the explicit graph formalism can feel over-engineered.
 
 \section{Microsoft AutoGen}
 
-Microsoft's AutoGen framework prioritizes multi-agent conversation and collaborative reasoning. Agents communicate via multi-turn dialogue; a conversation manager orchestrates exchanges. AutoGen is purpose-built for debate, brainstorming, and iterative refinement scenarios where agent interaction patterns are not predetermined.
+Microsoft AutoGen approaches multi-agent orchestration through agent conversations\cite{AutoGen2023}. Agents exchange messages in round-robin or custom turn-taking order. The conversation loop continues until a termination condition (a summary is complete, a maximum turn count is reached, a user confirms the result).
 
-\cite{AutoGen2023} describes the conversation-based model: agents receive the conversation history, generate responses, and participate in dialogue. The conversation manager monitors dialogue quality and can inject guidance, terminate loops, or escalate to human oversight. AutoGen's strength lies in emergence---collaborative problem solving can spontaneously improve as agents interact. The trade-off is unpredictability: conversation-based systems offer no guarantees about termination, latency, or output quality. Production deployments of AutoGen typically layer explicit supervision to bound conversation length and introduce deterministic termination.
+AutoGen agents are defined by a system prompt (role and capabilities) and an LLM backend. Agents can invoke tools (code execution, web search, file I/O) and observe tool outputs before responding. Conversation context grows with each turn, enabling agents to reference and build on prior discussion.
+
+This model is natural for collaborative problem-solving—multi-turn debate, iterative refinement, and consensus-seeking. It provides good observability: the conversation transcript is the audit trail. Disadvantages include sequential turn structure (parallelism is not native) and potential for conversation drift (messages grow unbounded without active summarization).
 
 \section{Framework Comparison}
 
+Table~\ref{tab:framework-comparison} compares the four frameworks across architecture, strengths, and recommended use cases. The choice depends on problem characteristics: for standard patterns with limited parallelism, CrewAI is recommended; for custom workflows requiring fine-grained composition, LangChain; for complex systems demanding state management and parallelism, LangGraph; for collaborative multi-turn scenarios, AutoGen.
+
 \begin{longtable}{@{}p{2.5cm}p{3.5cm}p{3.8cm}p{4.0cm}@{}}
 \toprule
-\textbf{Framework} & \textbf{Orchestration Model} & \textbf{Strengths} & \textbf{Best For} \\[8pt]
+\textbf{Framework} & \textbf{Architecture} & \textbf{Strengths} & \textbf{Best For} \\
 \endfirsthead
 \toprule
-\textbf{Framework} & \textbf{Orchestration Model} & \textbf{Strengths} & \textbf{Best For} \\[8pt]
+\textbf{Framework} & \textbf{Architecture} & \textbf{Strengths} & \textbf{Best For} \\
 \endhead
 \midrule
-CrewAI & Process-driven (sequential, hierarchical) & Rapid prototyping; opinionated defaults; natural language task definitions & Research pipelines, content generation, well-defined workflows \\[8pt]
-LangChain & Modular chains + agents & Maximum flexibility; rich ecosystem; composable primitives & Custom topologies, integration into larger systems, rapid iteration \\[8pt]
-LangGraph & State machine (DAG) & Determinism; replay-ability; explicit control flow & Mission-critical systems, complex topologies, auditability requirements \\[8pt]
-AutoGen & Conversation-based collaboration & Emergent reasoning; multi-agent dialogue; human-in-loop ready & Debate scenarios, brainstorming, collaborative refinement \\[8pt]
+CrewAI & Role-based agent teams with process orchestration & Prescriptive patterns, rapid development, clear task assignment & Standard workflows: research{\textendash}writing{\textendash}editing pipelines \\[8pt]
+\midrule
+LangChain & Composable chains via LCEL with custom agent loops & Flexibility, broad ecosystem, fine-grained control & Custom and innovative workflows requiring composition \\[8pt]
+\midrule
+LangGraph & Explicit state graphs with conditional node routing & State visibility, deterministic execution, parallelism, checkpointing & Complex systems requiring state management, debugging, and reproducibility \\[8pt]
+\midrule
+AutoGen & Conversation-based agent turns with tool invocation & Natural collaborative semantics, good observability & Multi-turn debate, iterative refinement, consensus-seeking \\[8pt]
 \bottomrule
-\end{longtable}
+\end{longtable}\label{tab:framework-comparison}
 
-\section{Selection Heuristics}
+\section{Design Philosophy Trade-offs}
 
-For teams seeking rapid time-to-market with sequential or hierarchical workflows, \textit{CrewAI} minimizes boilerplate and cognitive load. For integration into existing codebases or custom topologies requiring fine-grained control, \textit{LangChain} provides the necessary abstraction level. For production systems demanding reproducibility, auditability, and complex state management, \textit{LangGraph} offers explicit guarantees. For collaborative reasoning and debate scenarios, \textit{AutoGen} is purpose-built.
+CrewAI's prescriptive design minimizes choice overhead but constrains customization. A researcher-writer-editor pipeline is implemented in minutes; a novel orchestration pattern may require extending the framework. LangChain and LangGraph prioritize flexibility, enabling any orchestration topology but demanding greater architectural expertise.
 
-In practice, production deployments often combine frameworks: use CrewAI for agent definition and task specification, LangChain for tool binding and chain composition, and LangGraph for orchestration control at the top level. This layered approach captures the strengths of each framework while mitigating individual weaknesses.
+Sequential execution, the default in CrewAI and AutoGen, is intuitive and ensures clear ordering but limits parallelism. Wall-clock time grows with task count. LangChain and LangGraph support fine-grained parallelism through explicit chain composition and graph edges, enabling multiple tasks to run concurrently. Token consumption during parallel phases is higher, which can trigger rate limits.
+
+Memory management reflects these philosophies. CrewAI provides built-in per-agent memory, simplifying state tracking. LangChain offers multiple memory strategies (buffer, summary, vector store), requiring selection and configuration. LangGraph's explicit state graphs provide the clearest semantics: state is visible, versioned, and persistence is designed from the start.
+
+Tool integration differs in scope. CrewAI tools are role-specific, modeling domain workflows naturally (a Researcher has web search; a Writer has grammar checking). LangChain and LangGraph centralize tools, enabling broader reuse and composition. Each approach has merit: role-specific tools enforce clean separation; centralized tools maximize reuse.
+
+\section{Production Readiness}
+
+All four frameworks are production-capable. CrewAI excels at rapid deployment of standard patterns with built-in observability (callbacks, structured logging). LangChain offers the broadest ecosystem and maximum customization but requires architectural expertise. LangGraph provides the strongest guarantees around state management, determinism, and auditability.
+
+The choice depends on requirements\cite{LangChain2024a}: for rapid development of known patterns, CrewAI; for innovation and custom workflows, LangChain; for deterministic, auditable systems with complex state, LangGraph; for collaborative multi-turn scenarios, AutoGen. For HW3, CrewAI provides a prescriptive framework ideal for research-writing-editing pipelines, while LangChain tools (web search, code execution) integrate seamlessly through CrewAI's tool system.
+
+\bibliographystyle{plain}
