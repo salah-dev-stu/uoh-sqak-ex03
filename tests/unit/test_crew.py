@@ -67,8 +67,11 @@ def test_crew_run_success(tmp_path, monkeypatch):
          patch.object(cm, "Crew") as mock_crew_cls:
         mock_crew_cls.return_value.kickoff.return_value = "done"
         crew = ArticleCrew("Test Topic")
+        fake_pdf = tmp_path / "ws" / "main.pdf"
+        fake_pdf.parent.mkdir(parents=True, exist_ok=True)
+        fake_pdf.write_bytes(b"%PDF")
         with patch.object(crew, "_run_latex_phase_parallel", return_value=[]), \
-             patch.object(crew, "_compile_pdf", return_value=None):
+             patch.object(crew, "_compile_pdf", return_value=fake_pdf):
             result = crew.run()
     assert result.success is True
     assert result.pdf_path.endswith("test.pdf")

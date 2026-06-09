@@ -38,9 +38,10 @@ class LaTeXCompileTool(BaseTool):
         stem = Path(main_tex).stem
         out = self._latex_dir / "output"
         out.mkdir(exist_ok=True)
-        flags = ["--interaction=nonstopmode", f"--output-directory={out}"]
+        # "output" is relative to self._latex_dir (lualatex's cwd), not to the project root
+        flags = ["--interaction=nonstopmode", "--output-directory=output"]
         self._run_cmd([self._compiler, *flags, main_tex])
-        self._run_cmd([self._biber, f"--input-directory={out}", f"--output-directory={out}", stem])
+        self._run_cmd([self._biber, "--input-directory=output", "--output-directory=output", stem])
         self._run_cmd([self._compiler, *flags, main_tex])
         self._run_cmd([self._compiler, *flags, main_tex])
         self._check_log(out / f"{stem}.log")

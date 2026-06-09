@@ -146,8 +146,8 @@ class ArticleCrew:
             if compiled:
                 import shutil
                 shutil.copy2(compiled, pdf_path)
+                result.success = True
             result.pdf_path = str(pdf_path)
-            result.success = True
             _log.info(f"Crew run complete: pdf_path={result.pdf_path}")
         except Exception as exc:
             result.errors.append(str(exc))

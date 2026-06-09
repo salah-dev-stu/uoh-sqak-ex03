@@ -1,6 +1,6 @@
 """Version management — starts at 1.00, bump adds 0.01 per change."""
 
-VERSION = "1.11"
+VERSION = "1.12"
 
 
 def bump(version: str) -> str:

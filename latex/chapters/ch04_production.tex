@@ -1,101 +1,114 @@
 \chapter{Production Patterns and Challenges}\label{ch:production}
 
-Multi-agent systems deployed to production require careful management of computational resources, latency constraints, and failure modes that research deployments rarely encounter. This chapter synthesizes operational patterns observed in large-scale production deployments, focusing on rate limiting, token budget management, the gatekeeper pattern, fault tolerance, observability, and cost optimization \cite{Anthropic2024b}.
+Production deployment of multi-agent systems introduces constraints absent in research prototypes: cost control, rate limiting, fault tolerance, observability, and compliance. This chapter explores architectural patterns that address these production concerns.
 
-\section{Rate Limiting and Token Budgets}\label{sec:rate-limiting}
+\section{Rate Limiting and Token Budgets}
 
-Language model API calls incur both financial cost and latency overhead. Production systems must enforce limits on the rate at which agents invoke LLMs to prevent runaway costs, API quota exhaustion, and cascading failures. Token budgets allocate a finite allowance of input and output tokens across all agent invocations, ensuring predictable cost behavior.
-
-Let \(K\) denote the total number of agent invocations in a workflow, \(t_k^{\text{in}}\) the number of input tokens for invocation \(k\), and \(t_k^{\text{out}}\) the number of output tokens. The total token budget \(B\) is defined as:
+Multi-agent orchestration consumes tokens at scale. A three-agent crew executing a research-write-edit pipeline across $K$ independent topics generates $3K$ LLM invocations. If each invocation averages $t_{\text{in}}$ input tokens and $t_{\text{out}}$ output tokens, and the Claude Opus model costs $c_{\text{in}}$ per input token and $c_{\text{out}}$ per output token, the total cost for all topics becomes:
 
 \begin{equation}
-B = \sum_{k=1}^{K} \left( t_k^{\text{in}} + t_k^{\text{out}} \right) \label{eq:token-budget}
+T_{\text{total}} = \sum_{k=1}^{K} t_{k,\text{in}} + \sum_{k=1}^{K} t_{k,\text{out}}
+\label{eq:token_budget}
 \end{equation}
 
-Each agent is assigned a fraction of the total budget based on its role and expected usage. A Researcher agent exploring diverse sources may allocate 40\% of the budget; a Writer agent composing coherent narrative might allocate 35\%; an Editor agent refining prose, 15\%; and a LaTeX Producer, 10\%. Tokens not consumed by lower-priority agents roll over to later stages, creating a safety buffer for unexpected complexity.
+To prevent runaway spending, production systems enforce a per-run token budget. CrewAI supports this via configuration; each agent declares a maximum token spend before refusing new invocations \cite{CrewAI2024}. The Gatekeeper (discussed below) intercepts all LLM calls and enforces the budget, throwing an exception if the cumulative token count exceeds the limit.
 
-Rate limiting complements token budgeting by imposing temporal constraints: maximum requests per second, maximum concurrent requests, and exponential backoff for transient failures. Standard practice in production systems enforces a token counter that decrements with each API call, and when the counter approaches zero, the orchestration layer warns or terminates agent execution.
+Beyond per-run budgets, rate limiting protects both the system and the LLM provider's rate limits. Anthropic's Claude API enforces per-minute request rate limits (e.g., 50 requests per minute for standard tier accounts). If a crew orchestrator spawns 20 parallel research agents, all querying Claude simultaneously, the system will hit rate limits and receive HTTP 429 responses. Production implementations use exponential backoff with jitter: on a 429 error, wait $2^{attempt}$ seconds plus random noise, then retry \cite{Segal2026}.
 
-\section{The Gatekeeper Pattern}\label{sec:gatekeeper}
+\section{The Gatekeeper Pattern}
 
-All external API calls---LLMs, web search services, LaTeX compilers, file storage, database systems---must flow through a single Gatekeeper class. The Gatekeeper is a middleware that intercepts all outbound requests, logs them for audit and debugging, enforces rate limits and token budgets, retries transient failures, and optionally caches results.
+All external API calls—LLM invocations, web searches, file system writes, LaTeX compilations—flow through a single Gatekeeper object. The Gatekeeper serves as a policy enforcement layer: it checks rate limits, enforces token budgets, logs invocations, and may block calls that violate security policies (e.g., queries that would leak sensitive data).
 
-The Gatekeeper implements several responsibilities:
+A minimal Gatekeeper interface looks as follows:
+
+\begin{tabular}{p{4cm}p{6cm}}
+\toprule
+\textbf{Method} & \textbf{Purpose} \\[5pt]
+\midrule
+\texttt{check\_rate\_limit()} & Block if too many requests in the last minute \\[5pt]
+\texttt{deduct\_tokens(in, out)} & Deduct from budget; throw if budget exhausted \\[5pt]
+\texttt{log\_call(agent, tool, args)} & Record invocation for audit trail \\[5pt]
+\texttt{check\_security\_policy(query)} & Reject queries matching blocklist patterns \\[5pt]
+\bottomrule
+\end{tabular}\\
+
+CrewAI agents do not invoke LLMs directly; instead, they ask the Gatekeeper for a wrapped LLM client. The wrapper transparently applies policies before and after each call. This pattern decouples policy logic from agent code, enabling policy changes without redeploying agents \cite{CrewAI2024}.
+
+\section{Retry and Circuit Breaker}
+
+LLM APIs fail. Networks drop packets. Rate limits trigger. Production orchestration systems must distinguish between transient failures (retry) and permanent failures (circuit break).
+
+Transient failures—network timeouts, HTTP 429 rate-limit responses, momentary service unavailability—warrant exponential backoff retry. The probability of ultimate success after $n$ retries follows:
+
+\begin{equation}
+P_{\text{success}}(n) = 1 - \prod_{i=1}^{n} (1 - p_{\text{transient}})
+\label{eq:retry_probability}
+\end{equation}
+
+where $p_{\text{transient}}$ is the per-attempt success probability. With $p_{\text{transient}} = 0.9$ and $n = 3$ retries, $P_{\text{success}} \approx 0.999$.
+
+Permanent failures—authentication errors, malformed requests, service deprecations—are signaled by specific HTTP status codes (401, 400, 410). Retrying these is futile; the system should immediately escalate to a human operator or trigger a circuit breaker.
+
+Circuit breaker logic works as follows:
+\begin{enumerate}
+\item \textbf{Closed state:} normal operation; all requests pass through.
+\item \textbf{Open state (triggered after $F$ failures in $W$ seconds):} block all requests for $D$ seconds (the backoff duration).
+\item \textbf{Half-open state:} after $D$ seconds, allow a single test request. If it succeeds, reset to Closed. If it fails, reopen.
+\end{enumerate}
+
+This pattern prevents cascading failures: if Claude becomes unavailable, the circuit breaker stops hammering it after the first 5 failures, waiting $D$ seconds before testing recovery \cite{Segal2026}.
+
+\section{Observability and Logging}
+
+Production systems must answer: ``What did my agents do?'' Observability requires structured logging of:
 
 \begin{itemize}
-\item \textbf{Request Authentication}: Inject API credentials (tokens, keys) from secure configuration, never hardcoded into agent logic.
-\item \textbf{Rate Limiting}: Enforce per-service rate limits (e.g., 30 requests per minute to Claude API, 10 requests per minute to web search).
-\item \textbf{Token Accounting}: Decrement the global token budget; abort if insufficient tokens remain.
-\item \textbf{Request Logging}: Record all outbound calls with timestamp, parameters, token usage, latency, and result status for observability and cost accounting.
-\item \textbf{Retry Logic}: Implement exponential backoff for transient failures (HTTP 429 rate limits, network timeouts).
-\item \textbf{Response Caching}: Optionally cache results of deterministic queries (e.g., web search for the same topic returns the same results within a time window).
-\item \textbf{Error Enrichment}: Catch API exceptions and wrap them with context (which agent made the call, what parameters, what token budget remains) to aid debugging.
+\item \textbf{Agent invocation:} which agent, with what task, at what time.
+\item \textbf{LLM calls:} which model, input/output tokens, latency, cost.
+\item \textbf{Tool usage:} which tool, arguments, return value, errors.
+\item \textbf{State transitions:} task queued \(\to\) in-progress \(\to\) completed/failed.
 \end{itemize}
 
-By centralizing all external calls through the Gatekeeper, operators gain observability: they can inspect a single log to understand what the entire agent system did, identify runaway agents, and attribute costs to specific agents. The Gatekeeper also becomes a natural hook for A/B testing (route some requests to Claude, others to competitor models) and graceful degradation (if the LLM API fails, fall back to cached results or simpler heuristics).
+Rather than print statements, production code uses structured logging: each log entry is a JSON object with typed fields. A typical log entry:
 
-\section{Retry and Circuit Breaker Patterns}\label{sec:retry-circuit}
+\begin{verbatim}
+{
+  "timestamp": "2026-06-09T14:23:15Z",
+  "agent": "researcher",
+  "action": "invoke_llm",
+  "model": "claude-opus-4-8",
+  "tokens_in": 2541,
+  "tokens_out": 891,
+  "latency_ms": 3200,
+  "cost_usd": 0.18,
+  "status": "success"
+}
+\end{verbatim}
 
-Production systems encounter transient failures: network timeouts, rate limit errors, API service degradations. Naive retry strategies---immediate retries in a tight loop---exacerbate the problem by overwhelming an already-stressed service. Sophisticated retry strategies use exponential backoff: the first retry waits 1 second, the second waits 2 seconds, the third waits 4 seconds, and so on, up to a maximum wait time.
+CrewAI integrates logging frameworks; LangChain/LangGraph provides callback hooks for instrumentation. The logs feed into a centralized sink (e.g., PostgreSQL, Elasticsearch) enabling post-hoc analysis: "How much did we spend on researcher agents last week?" or "Which tools failed most often?" \cite{CrewAI2024}.
 
-Let \(n\) denote the retry attempt number (starting from 0). The wait time before the \(n\)-th retry is:
+\section{Cost Optimization and Monitoring}
 
-\begin{equation}
-w_n = \min\left( w_{\max}, b \cdot c^n \right) \label{eq:backoff}
-\end{equation}
-
-where \(b\) is the base wait time (e.g., 1 second), \(c\) is the backoff multiplier (typically 2), and \(w_{\max}\) is the maximum wait cap (e.g., 60 seconds). Jitter---adding randomness to prevent thundering herd---is often added: \(w_n' = w_n + \text{random}(0, w_n \cdot j)\) where \(j\) is a jitter fraction (e.g., 0.1).
-
-The Circuit Breaker pattern complements retry logic: if a service fails repeatedly, the Circuit Breaker enters an \textit{open} state, immediately failing subsequent requests without calling the service, allowing it time to recover. Once the service stabilizes, the Circuit Breaker transitions to a \textit{half-open} state, allowing a limited number of test requests. If those succeed, the circuit \textit{closes}; if they fail, it \textit{opens} again.
-
-For multi-agent systems, the Circuit Breaker is typically applied per-service (one per LLM provider, one per web search API, one per LaTeX compiler) to prevent one failing service from cascading into agent system-wide outages. An agent whose sole service has an open circuit is suspended from execution until the circuit closes \cite{CrewAI2024}.
-
-\section{Observability and Structured Logging}\label{sec:observability}
-
-Production deployments require detailed observability to understand system behavior, identify performance bottlenecks, and debug failures. Structured logging---emitting logs as JSON with fields like timestamp, agent name, task name, action type, token usage, latency, and result status---enables downstream analysis via log aggregation platforms (ELK, CloudWatch, Datadog).
-
-A minimal structured log entry from an agent system might include:
-
-\begin{itemize}
-\item \texttt{timestamp}: ISO 8601 timestamp of the event.
-\item \texttt{level}: log severity (INFO, WARN, ERROR).
-\item \texttt{component}: which part of the system (agent name, gatekeeper, crew orchestrator).
-\item \texttt{action}: what happened (api\_call, task\_start, task\_end, retry, timeout).
-\item \texttt{tokens\_in}: input tokens consumed.
-\item \texttt{tokens\_out}: output tokens generated.
-\item \texttt{latency\_ms}: wall-clock time from start to completion.
-\item \texttt{status}: success or failure code.
-\item \texttt{error\_message}: if status is failure, the exception or error details.
-\item \texttt{context}: additional free-form context (query, result summary, retry count).
-\end{itemize}
-
-With structured logs, operators can ask questions like: ``Which agent consumed the most tokens?'' (aggregate on component and sum tokens\_in and tokens\_out), ``Which services have the highest error rate?'' (filter on action and aggregate error counts), and ``What is the 95th percentile latency for web search calls?'' (filter on component\,=\,web\_search and compute percentile of latency\_ms).
-
-Observability is not optional in production systems; it is the primary tool for understanding system behavior and diagnosing failures after they occur.
-
-\section{Cost Optimization}\label{sec:cost-optimization}
-
-Language model API costs scale with token usage and request volume. A production multi-agent system must actively optimize to keep costs reasonable. The cost of a single end-to-end workflow is:
+The total cost of orchestration across $K$ tasks, with $A$ agents executing $T$ tasks per agent, is:
 
 \begin{equation}
-C = \sum_{k=1}^{K} \left( c_{\text{in}} \cdot t_k^{\text{in}} + c_{\text{out}} \cdot t_k^{\text{out}} \right) \label{eq:cost-model}
+C_{\text{total}} = \sum_{a=1}^{A} \sum_{t=1}^{T} \bigl( c_{\text{in}} \cdot \tau_{a,t}^{\text{in}} + c_{\text{out}} \cdot \tau_{a,t}^{\text{out}} \bigr)
+\label{eq:cost_model}
 \end{equation}
 
-where \(c_{\text{in}}\) is the per-token cost for input tokens and \(c_{\text{out}}\) is the per-token cost for output tokens (typically \(c_{\text{out}} > c_{\text{in}}\) because generation is more expensive than processing).
+where $\tau_{a,t}^{\text{in}}$ and $\tau_{a,t}^{\text{out}}$ denote input and output tokens for agent $a$'s task $t$.
 
 Cost optimization strategies include:
 
 \begin{itemize}
-\item \textbf{Model Selection}: Route simpler tasks to cheaper models. A web search query extraction task might use a small model (e.g., Claude Haiku); a complex synthesis task might use a larger, more capable model.
-\item \textbf{Prompt Optimization}: Reduce input token count by removing redundant instructions, examples, and context. Every token in the prompt is cost; pruning saves money.
-\item \textbf{Caching}: Cache LLM responses for deterministic queries (e.g., factual lookups, code snippets). If a query repeats, serve the cached result instead of invoking the LLM.
-\item \textbf{Batch Processing}: Group multiple independent queries and send them in a single batch to the LLM (if the API supports batching), reducing per-request overhead.
-\item \textbf{Asynchronous Execution}: Execute independent agent tasks in parallel to reduce wall-clock latency and allow human reviewers time to intervene before costly later stages.
-\item \textbf{Early Termination}: Implement quality gates. If an agent's output quality is below a threshold, reject it and either retry with different parameters or escalate to human review.
+\item \textbf{Skill injection via SKILL.md files:} Embedding domain knowledge externally reduces repetitive prompting and hallucination, lowering token consumption by 20--40\% \cite{CrewAI2024}.
+\item \textbf{Model selection by task:} Reserve Opus for complex reasoning (research synthesis); use cheaper Sonnet or Haiku for data preprocessing or formatting tasks.
+\item \textbf{Output caching:} If two tasks invoke the same prompt on the same context (e.g., citation verification), cache the LLM response to avoid duplicate tokens \cite{Anthropic2024b}.
+\item \textbf{Batching:} Process multiple topics in a single crew invocation rather than launching separate crews per topic, amortizing overhead.
 \end{itemize}
 
-Equation \ref{eq:cost-model} shows that cost is a linear combination of token counts. Monitoring actual token usage (via structured logs) against budgeted costs reveals inefficiencies: a Researcher agent consuming 5 times its allocated budget suggests that the queries are too broad or the search strategy is inefficient. Cost monitoring is a continuous feedback loop: operators analyze logs, identify high-cost agents, and optimize their prompts and parameters \cite{Wang2023}.
+Continuous monitoring of cost trends is essential. The Gatekeeper logs cost per agent, per tool, per hour. Weekly cost reports identify runaway spending before it balloons.
 
-\section{Summary}
+\section{Conclusion}
 
-Production multi-agent systems are not simple orchestrations of agent calls; they are carefully engineered systems with rate limiting, token budgets, gatekeepers, retry logic, observability, and cost optimization. The patterns described in this chapter are not optional; they are essential for reliable, cost-predictable, observable systems suitable for enterprise deployment. The Gatekeeper centralizes all external calls and provides a single point for monitoring, retry, and rate limiting. Exponential backoff and circuit breakers handle transient failures gracefully. Structured logging enables post-facto analysis and debugging. Together, these patterns transform multi-agent systems from research prototypes into production-grade software.
+Production multi-agent orchestration differs from research prototypes in rigor: cost control, explicit fault handling, comprehensive logging, and compliance auditing become non-negotiable. The Gatekeeper pattern centralizes policy enforcement; rate limiting and circuit breakers prevent cascade failures; structured logging enables observability and cost analysis. These patterns, though more complex than naive orchestration, are the foundation of reliable production systems \cite{Segal2026}.
