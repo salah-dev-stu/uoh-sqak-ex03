@@ -8,7 +8,7 @@ In sequential orchestration, agents execute in a defined order. Agent A complete
 
 \textit{Strengths}: Predictable, easy to trace, suitable for assembly-line workflows.
 
-\textit{Weaknesses}: Brittle---failure at any stage blocks downstream agents. Agents cannot parallelize work. Latency accumulates across all steps \cite{LangChain2024}.
+\textit{Weaknesses}: Brittle---failure at any stage blocks downstream agents. Agents cannot parallelize work. Latency accumulates across all steps \cite{LangChain2024a}.
 
 The total latency of a sequential pipeline is given by:
 \begin{equation}
@@ -32,7 +32,7 @@ All agents are peers. Each agent can initiate communication with any other agent
 
 \textit{Strengths}: Most flexible. Agents can opportunistically collaborate. No single point of failure.
 
-\textit{Weaknesses}: Hardest to reason about. Requires protocol specification. Debugging is complex \cite{LangChain2024}.
+\textit{Weaknesses}: Hardest to reason about. Requires protocol specification. Debugging is complex \cite{LangChain2024a}.
 
 In peer-to-peer topologies, consensus mechanisms ensure that all agents converge on a common understanding of the problem state. This is particularly valuable when agents have partial or conflicting information and must reach agreement before proceeding. Examples include voting protocols, Byzantine fault tolerance algorithms, and gossip-based aggregation \cite{Park2023}.
 

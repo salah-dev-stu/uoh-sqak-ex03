@@ -13,7 +13,7 @@ T_{\mathrm{total}} = \sum_{k=1}^{K}\bigl(t_{k}^{\mathrm{in}} + t_{k}^{\mathrm{ou
 \label{eq:tokenbudget}
 \end{equation}
 
-where $t_{k}^{\mathrm{in}}$ is input tokens for agent $k$ and $t_{k}^{\mathrm{out}}$ is output tokens. Each agent must declare its maximum allocation upfront. If actual consumption $T_{\mathrm{total}}^{\mathrm{actual}} > B_{\max}$, where $B_{\max}$ is the global budget, the orchestrator halts new agent invocations and escalates to fallback strategies: switch to a cheaper model, simplify task requirements, or escalate to human review \cite{LangChain2024}.
+where $t_{k}^{\mathrm{in}}$ is input tokens for agent $k$ and $t_{k}^{\mathrm{out}}$ is output tokens. Each agent must declare its maximum allocation upfront. If actual consumption $T_{\mathrm{total}}^{\mathrm{actual}} > B_{\max}$, where $B_{\max}$ is the global budget, the orchestrator halts new agent invocations and escalates to fallback strategies: switch to a cheaper model, simplify task requirements, or escalate to human review \cite{LangChain2024a}.
 
 Rate limits impose a second constraint. API providers enforce limits per minute or per day. The orchestrator must:
 
@@ -106,7 +106,7 @@ At scale (100 articles per month), this grows to \$30 monthly. Several strategie
 
 \subsection{Model Selection Strategy}
 
-Reserve expensive, high-capability models (Claude 3.5 Opus) for complex reasoning tasks. Delegate routine tasks (formatting, citation assembly, simple editing) to cheaper models (Claude 3.5 Haiku). This tiered approach reduces average cost per task by 40--60\% while maintaining quality on critical steps \cite{LangChain2024}.
+Reserve expensive, high-capability models (Claude 3.5 Opus) for complex reasoning tasks. Delegate routine tasks (formatting, citation assembly, simple editing) to cheaper models (Claude 3.5 Haiku). This tiered approach reduces average cost per task by 40--60\% while maintaining quality on critical steps \cite{LangChain2024a}.
 
 \subsection{Context Compression}
 

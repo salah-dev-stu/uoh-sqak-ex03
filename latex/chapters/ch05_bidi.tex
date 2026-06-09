@@ -61,14 +61,14 @@
 על \foreignlanguage{english}{Unicode}.
 
 הגדרת השפה הראשית והשפה הנוספת מתבצעת בקדמת המסמך (הפריאמבל):
-הפקודה \texttt{\textbackslash setmainlanguage\{hebrew\}} קובעת את העברית
-כשפה הראשית, ו-\texttt{\textbackslash setotherlanguage\{english\}} מגדירה
+הפקודה \foreignlanguage{english}{\texttt{\textbackslash setmainlanguage\{hebrew\}}} קובעת את העברית
+כשפה הראשית, ו-\foreignlanguage{english}{\texttt{\textbackslash setotherlanguage\{english\}}} מגדירה
 את האנגלית כשפה משנית.
 לאחר הגדרות אלה, כל הטקסט ב-\foreignlanguage{english}{RTL} כברירת מחדל,
 ומעברים לאנגלית מתבצעים על-ידי עטיפת הקטע האנגלי בפקודה
-\texttt{\textbackslash foreignlanguage\{english\}\{\ldots\}}
+\foreignlanguage{english}{\texttt{\textbackslash foreignlanguage\{english\}\{\ldots\}}}
 או על-ידי שימוש בסביבה
-\texttt{\textbackslash begin\{english\}\ldots\textbackslash end\{english\}}.
+\foreignlanguage{english}{\texttt{\textbackslash begin\{english\}\ldots\textbackslash end\{english\}}}.
 
 מהדר \foreignlanguage{english}{LuaLaTeX} כולל אוטומטית את ספריית
 \foreignlanguage{english}{luabidi}, המטפלת בהיפוך הכיוון ברמת הפרגרף.
@@ -78,13 +78,13 @@
 שני כללים קריטיים שסוכן \foreignlanguage{english}{AI} המייצר
 \foreignlanguage{english}{LaTeX} חייב ליישם ללא יוצא מן הכלל:
 ראשית, כל מילה אנגלית בתוך פקודת
-\texttt{\textbackslash texthebrew\{\ldots\}}
-חייבת להיות עטופה ב-\texttt{\textbackslash foreignlanguage\{english\}\{\ldots\}},
+\foreignlanguage{english}{\texttt{\textbackslash texthebrew\{\ldots\}}}
+חייבת להיות עטופה ב-\foreignlanguage{english}{\texttt{\textbackslash foreignlanguage\{english\}\{\ldots\}}},
 אחרת \foreignlanguage{english}{LuaLaTeX} עלול להפוך את סדר האותיות בשם
 הפקודה הלטיני.
-שנית, כל פקודת \texttt{\textbackslash cite\{\}} בתוך
-\texttt{\textbackslash begin\{hebrew\}\ldots\textbackslash end\{hebrew\}}
-חייבת להיות עטופה ב-\texttt{\textbackslash mbox\{\ldots\}},
+שנית, כל פקודת \foreignlanguage{english}{\texttt{\textbackslash cite\{\}}} בתוך
+\foreignlanguage{english}{\texttt{\textbackslash begin\{hebrew\}\ldots\textbackslash end\{hebrew\}}}
+חייבת להיות עטופה ב-\foreignlanguage{english}{\texttt{\textbackslash mbox\{\ldots\}}},
 שכן ללא עטיפה זו המספר הרב-ספרתי
 \foreignlanguage{english}{[10]} יוצג כ-\foreignlanguage{english}{[01]}.
 \end{hebrew}
@@ -100,9 +100,9 @@
 
 \textbf{עקביות כללי הכיוון.}
 מודל שפה גדול (\foreignlanguage{english}{LLM}) עשוי לייצר תוכן שבו
-מילים אנגליות בתוך פקודת \texttt{\textbackslash texthebrew\{\}}
+מילים אנגליות בתוך פקודת \foreignlanguage{english}{\texttt{\textbackslash texthebrew\{\}}}
 אינן עטופות בפקודת הכיוון המתאימה, ופקודות ציטוט אינן מוגנות
-ב-\texttt{\textbackslash mbox\{\}}.
+ב-\foreignlanguage{english}{\texttt{\textbackslash mbox\{\}}}.
 הפתרון הוא לשלב ב-\foreignlanguage{english}{SKILL.md} של הסוכן המייצר
 \foreignlanguage{english}{LaTeX} רשימה מפורשת של הכללים, דוגמאות נכונות
 ודוגמאות שגויות, וכלל ברור של "אין חריגות"

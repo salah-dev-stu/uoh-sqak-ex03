@@ -1,0 +1,55 @@
+% ch07_conclusion.tex — Chapter 7: Conclusion
+\chapter{Conclusion}\label{ch:conclusion}
+
+\section{Lessons Learned}\label{sec:lessons}
+
+This article has demonstrated multi-agent orchestration across five complementary dimensions:
+architecture topologies (Chapter~\ref{ch:architectures}), framework selection
+(Chapter~\ref{ch:frameworks}), production engineering (Chapter~\ref{ch:production}),
+multilingual typesetting (Chapter~\ref{ch:bidi}), and a self-referential case study
+(Chapter~\ref{ch:casestudy}). Several conclusions emerge from this survey.
+
+\textbf{Specialization beats generalism.}
+Assigning dedicated agents to research, writing, editing, and LaTeX production consistently
+outperforms a single monolithic prompt. Each agent optimizes for its domain, applies
+focused tools, and produces output that the next stage can reliably consume. The quality
+improvement is measurable: citation accuracy, prose clarity, and typesetting correctness
+all improve when each is owned by a specialist \cite{CrewAI2024}.
+
+\textbf{Explicit contracts enable reliability.}
+The most fragile multi-agent systems are those where agents make assumptions about their
+inputs. Robust pipelines define explicit input/output contracts per agent: expected format,
+token budget, required fields, and error conditions. When a stage deviates from its contract,
+the orchestrator detects the deviation and can retry, escalate, or fall back gracefully
+\cite{Segal2026}.
+
+\textbf{Prompt engineering is infrastructure.}
+Agent behavior is determined by prompts. Vague prompts produce inconsistent outputs; precise,
+rule-laden prompts produce reliable outputs. The v1.07 rule set embedded in this pipeline
+(R1--R10 per LaTeX task) reduced compilation errors from multiple per run to zero per run.
+Prompt engineering deserves the same versioning, testing, and review discipline as code.
+
+\textbf{BiDi is non-trivial.}
+Generating Hebrew--English documents with a multi-agent system requires explicit rules at
+every level: citation wrapping with \texttt{\textbackslash mbox}, English terms inside
+\texttt{\textbackslash texthebrew} wrapped with \texttt{\textbackslash foreignlanguage}, and
+four compilation passes for cross-reference settlement. These rules cannot be inferred; they
+must be embedded in agent skills and enforced by the pipeline \cite{Polyglossia2023}.
+
+\section{Future Directions}\label{sec:future}
+
+Several directions merit further investigation. \textbf{Dynamic topology selection}—choosing
+sequential, hierarchical, or parallel execution based on task complexity at runtime—would
+reduce latency for simple documents while preserving quality for complex ones. \textbf{Agent
+self-correction loops}, where each agent inspects its own output against known constraints
+before passing it downstream, would reduce error propagation. \textbf{Multi-provider
+orchestration}—routing different agents to different LLM providers based on cost,
+capability, and latency—would improve cost efficiency and resilience.
+
+The convergence of capable language models, mature orchestration frameworks like CrewAI and
+LangChain, and expressive typesetting systems like LuaLaTeX opens a new class of document
+production workflows. This article is itself a proof of concept: it was researched, drafted,
+edited, and typeset by an orchestrated agent team, demonstrating that production-quality
+technical documents can emerge from well-engineered multi-agent pipelines \cite{Segal2026}.
+
+\nocite{AutoGen2023,Wang2023,WeiEtAl2022,Shinn2023,WooldridgeJennings1995,AMS2023}
