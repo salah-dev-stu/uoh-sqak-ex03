@@ -716,6 +716,75 @@ Legend: `[ ]` = pending · `[x]` = done · `[-]` = skipped/N/A
 
 ---
 
+## Phase 17: Fast Pipeline — Haiku + Parallel LaTeX (T-661 – T-710)
+
+> Implementing PRD_fast_pipeline.md (FP-01). Goal: reduce wall-clock from ~70 min to ≤10 min.
+> Strategy: Haiku model by default, Sonnet for ch05 only, parallel ThreadPoolExecutor for 7 LaTeX tasks.
+
+### 17a — PRD & Docs (T-661 – T-664)
+- [x] T-661: Create `docs/PRD_fast_pipeline.md` — Option C spec (Haiku + Parallel), Input/Output/Setup, Acceptance Criteria
+- [ ] T-662: Add fast pipeline section to `docs/PLAN.md` (architecture diagram, threading model)
+- [ ] T-663: Add FP-01 entries to PRD coverage checklist at bottom of this file
+- [ ] T-664: Commit PRD, PLAN update, and this TODO batch: `feat(docs): add fast pipeline PRD and TODO tasks (FP-01)`
+
+### 17b — Config: per-task model override (T-665 – T-669)
+- [ ] T-665: Add `"default_model": "claude-haiku-4-5-20251001"` field to `config/setup.json`
+- [ ] T-666: Add `"model"` field to each of the 7 latex task entries in `config/tasks.json` — haiku for ch01–ch04, ch06, bib; sonnet for ch05
+- [ ] T-667: Add `"haiku_timeout_seconds": 300` and `"sonnet_timeout_seconds": 600` to `config/rate_limits.json`
+- [ ] T-668: Update `shared/config.py` — expose `default_model`, `haiku_timeout`, `sonnet_timeout` properties
+- [ ] T-669: Commit config changes: `feat(config): add per-task model override fields for fast pipeline`
+
+### 17c — ClaudeCLILLM: model + timeout per-instance (T-670 – T-675)
+- [ ] T-670: Write failing test `tests/unit/test_claude_cli_llm_model.py` — assert `ClaudeCLILLM(model="claude-haiku-4-5-20251001").model == "claude-haiku-4-5-20251001"`
+- [ ] T-671: Run test to confirm it fails: `uv run pytest tests/unit/test_claude_cli_llm_model.py -v`
+- [ ] T-672: Update `ClaudeCLILLM` — replace hardcoded model string with `model: str` field, default from config `default_model`; update `_build_cmd()` to pass `--model {self.model}`; keep timeout field driven by config
+- [ ] T-673: Run test to confirm it passes
+- [ ] T-674: Confirm `shared/claude_cli_llm.py` is still ≤ 150 lines: `awk 'NF && !/^[[:space:]]*#/' src/agent_article/shared/claude_cli_llm.py | wc -l`
+- [ ] T-675: Commit: `feat(llm): per-instance model + timeout from config in ClaudeCLILLM`
+
+### 17d — Tasks: per-task model-aware agent (T-676 – T-682)
+- [ ] T-676: Write failing test `tests/unit/test_build_latex_tasks_model.py` — assert `build_latex_tasks(...)` produces Task whose agent uses haiku for ch01 and sonnet for ch05
+- [ ] T-677: Run test to confirm it fails
+- [ ] T-678: Update `build_latex_tasks()` in `tasks/article_tasks.py` — read `model` field from `config/tasks.json` per task; instantiate `ClaudeCLILLM(model=task_model)` and build a new `LaTeXAgent` instance for that task
+- [ ] T-679: Run test to confirm it passes
+- [ ] T-680: Confirm `article_tasks.py` is still ≤ 150 lines
+- [ ] T-681: Run full ruff check: `uv run ruff check src/agent_article/tasks/article_tasks.py`
+- [ ] T-682: Commit: `feat(tasks): per-task model override for LaTeX tasks`
+
+### 17e — Crew: parallel LaTeX phase (T-683 – T-693)
+- [ ] T-683: Write failing test `tests/unit/test_parallel_latex.py` — mock `ClaudeCLILLM.call()` to record call timestamps; run `_run_latex_phase_parallel([t1..t7])`; assert all 7 tasks were called and max(start_times) - min(start_times) < 5s (they ran concurrently)
+- [ ] T-684: Run test to confirm it fails
+- [ ] T-685: Add `_run_latex_phase_parallel(tasks: list[Task]) -> list[str]` to `crew/article_crew.py` — uses `concurrent.futures.ThreadPoolExecutor(max_workers=min(7, os.cpu_count()))` to call each task's agent synchronously in a thread; writes output to `task.output_file`; logs thread ID + task name at start and completion; returns list of output file paths
+- [ ] T-686: Update `ArticleCrew.run()` — after sequential crew finishes editor task, call `_run_latex_phase_parallel(latex_tasks)` instead of including latex tasks in the CrewAI sequential process
+- [ ] T-687: Run test to confirm it passes
+- [ ] T-688: Confirm `article_crew.py` is still ≤ 150 lines; if not, extract helpers to `crew/_latex_parallel.py`
+- [ ] T-689: Run ruff check on modified files: `uv run ruff check src/agent_article/crew/`
+- [ ] T-690: Run full test suite: `uv run pytest tests/ -v`
+- [ ] T-691: Commit: `feat(crew): parallel LaTeX task execution via ThreadPoolExecutor`
+
+### 17f — Agent prompt quality rules (T-694 – T-700)
+- [ ] T-694: Update all 6 `latex_ch*` task descriptions in `config/tasks.json` — prepend explicit rule block: (1) output ONLY LaTeX (first char must be `%` or `\`); (2) tables always use `p{Xcm}` column types; (3) no markdown fences; (4) no trailing prose after LaTeX content; (5) cite keys must exactly match the `[AuthorYear]` keys in `workspace/research_notes.md`
+- [ ] T-695: Update `latex_bib` task description — add rule: generate `@misc`/`@article`/`@book` entries for EVERY `[AuthorYear]` key used in chapter files
+- [ ] T-696: Update `latex/skills/latex_skill/SKILL.md` — add "LaTeX Agent Quality Checklist" section encoding the same rules as SKILL.md backstory injection
+- [ ] T-697: Bump `config/tasks.json` version field to 1.03
+- [ ] T-698: Commit: `feat(prompts): encode table/citation/output quality rules into agent task descriptions`
+
+### 17g — Integration test + timing (T-701 – T-706)
+- [ ] T-701: Write `tests/integration/test_fast_pipeline.py` — mock `ClaudeCLILLM.call()` to return minimal valid LaTeX; assert all 7 `.tex` files are written; assert bib file is written; assert PDF compile is called after
+- [ ] T-702: Run integration test: `uv run pytest tests/integration/test_fast_pipeline.py -v`
+- [ ] T-703: Run full test suite + coverage: `uv run pytest --cov=src/agent_article --cov-report=term-missing`
+- [ ] T-704: Confirm coverage ≥ 85%
+- [ ] T-705: Run ruff on entire src: `uv run ruff check src/`
+- [ ] T-706: Commit: `test: integration test for parallel fast pipeline (FP-01)`
+
+### 17h — Live timing run (T-707 – T-710)
+- [ ] T-707: Delete stale generated files: `rm -f latex/chapters/*.tex latex/bib/references.bib latex/output/*.pdf workspace/research_notes.md workspace/chapters/*.md`
+- [ ] T-708: Run timed end-to-end: `time printf "1\nMulti-Agent Orchestration Patterns in AI Systems\n" | uv run python -m agent_article.main 2>&1 | tee results/fast_pipeline_run.log`
+- [ ] T-709: Verify wall-clock ≤ 10 min; verify PDF ≥ 15 pages; verify no `[AuthorYear]` bold keys in PDF
+- [ ] T-710: Commit final result: `feat(pipeline): FP-01 complete — parallel Haiku pipeline ≤10 min`
+
+---
+
 ## PRD Coverage Verification Checklist
 
 > All FR and NFR from `docs/PRD.md` must appear in at least one TODO task.
@@ -749,3 +818,14 @@ Legend: `[ ]` = pending · `[x]` = done · `[-]` = skipped/N/A
 | AC-02: Code quality | T-074 – T-090 |
 | AC-03: Repository | T-001 – T-010, T-651 – T-654 |
 | AC-04: Submission | T-655 – T-660 |
+| FP-FR-01: Haiku default model | T-665, T-670 – T-675 |
+| FP-FR-02: Per-task model override | T-666, T-676 – T-682 |
+| FP-FR-03: ch05 Sonnet override | T-666, T-678 |
+| FP-FR-04: Parallel ThreadPoolExecutor | T-683 – T-691 |
+| FP-FR-05: Parallel logging | T-685 |
+| FP-FR-06: output_file per thread | T-685, T-686 |
+| FP-FR-07: Post-parallel compile | T-686 |
+| FP-FR-08: Task failure logging | T-685 |
+| FP-FR-09: ≤10 min wall-clock | T-707 – T-709 |
+| FP-FR-10: model field in tasks.json | T-666 |
+| FP-FR-11: Agent prompt quality rules | T-694 – T-698 |

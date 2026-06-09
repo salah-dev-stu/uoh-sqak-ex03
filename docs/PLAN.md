@@ -438,4 +438,84 @@ All config files carry `"version": "1.00"`. Zero hardcoded values in Python sour
 
 ---
 
-*PLAN Version 1.00 — Salah Qadah, Andalus Kalash — 2026-06-06*
+---
+
+## 11. Fast Pipeline — Haiku + Parallel LaTeX (FP-01)
+
+**Status:** Approved (2026-06-09). See `docs/PRD_fast_pipeline.md` for full spec.
+
+### 11.1 Motivation
+
+Sequential `claude -p` calls at Sonnet model take 8–15 min each. With 3 sequential agents + 7 LaTeX tasks, total wall-clock was 60–80 min. Target: ≤ 10 min.
+
+### 11.2 Two-Phase Architecture
+
+```
+Phase 1 — Sequential (unchanged, CrewAI Process.sequential):
+  ResearcherAgent [Haiku] → WriterAgent [Haiku] → EditorAgent [Haiku]
+
+Phase 2 — Parallel (Python ThreadPoolExecutor, outside CrewAI):
+  Thread 1: latex_ch01 [Haiku]   Thread 2: latex_ch02 [Haiku]
+  Thread 3: latex_ch03 [Haiku]   Thread 4: latex_ch04 [Haiku]
+  Thread 5: latex_ch05 [Sonnet]  Thread 6: latex_ch06 [Haiku]
+  Thread 7: latex_bib  [Haiku]
+  (wall-clock = slowest thread = ch05 Sonnet ≈ 2 min)
+
+Phase 3 — Compile (lualatex × 4 passes, unchanged):
+  lualatex → biber → lualatex → lualatex
+```
+
+**Why ch05 uses Sonnet:** BiDi chapter requires exact `\begin{hebrew}...\end{hebrew}` blocks, `\hebrewheadingformat` / `\defaultheadingformat` calls, and `\addtocontents{toc}{...}` with RTL dot leaders. Haiku consistently drops these details.
+
+### 11.3 Model Configuration
+
+```json
+// config/setup.json
+"default_model": "claude-haiku-4-5-20251001"
+
+// config/tasks.json — per task
+"latex_ch05": {
+  "model": "claude-sonnet-4-6",
+  "description": "..."
+}
+// all other latex_ch* tasks inherit default_model (haiku)
+```
+
+### 11.4 Threading Model
+
+```python
+# crew/article_crew.py
+def _run_latex_phase_parallel(self, tasks: list[Task]) -> list[str]:
+    from concurrent.futures import ThreadPoolExecutor
+    max_workers = min(len(tasks), os.cpu_count() or 4)
+    with ThreadPoolExecutor(max_workers=max_workers) as pool:
+        futures = {pool.submit(self._run_single_latex_task, t): t for t in tasks}
+        return [f.result() for f in futures.values()]
+```
+
+Each thread calls the task's agent directly (bypassing CrewAI's sequential lock) and writes output to `task.output_file`. Threads are independent — no shared mutable state.
+
+### 11.5 Agent Prompt Quality Rules
+
+To prevent manual post-processing, these rules are encoded into all `latex_ch*` task descriptions and into `latex/skills/latex_skill/SKILL.md`:
+
+1. Output ONLY LaTeX — first character must be `%` or `\`
+2. Tables: always use `p{Xcm}` column types, never bare `l`/`r`/`c`
+3. Citation keys: use EXACTLY the `[AuthorYear]` keys from `workspace/research_notes.md`
+4. No markdown fences (` ```latex `) or trailing prose after the closing `\end{...}` 
+5. `latex_bib`: generate entries for EVERY `[AuthorYear]` key used in any chapter
+
+### 11.6 Updated Timing Estimate
+
+| Phase | Before FP-01 | After FP-01 |
+|---|---|---|
+| ResearcherAgent | ~8 min (Sonnet) | ~2 min (Haiku) |
+| WriterAgent | ~12 min (Sonnet) | ~3 min (Haiku) |
+| EditorAgent | ~8 min (Sonnet) | ~2 min (Haiku) |
+| 7 LaTeX tasks | ~35 min sequential | ~2 min parallel (ch05 Sonnet gating) |
+| LaTeX compile | ~1.5 min | ~1.5 min |
+| **Total** | **~65 min** | **≤10 min** |
+
+---
+
+*PLAN Version 1.01 — Salah Qadah, Andalus Kalash — 2026-06-09 (§11 added: fast pipeline)*
