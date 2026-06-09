@@ -1,55 +1,34 @@
-% ch07_conclusion.tex — Chapter 7: Conclusion
+% ch07_conclusion.tex
+
 \chapter{Conclusion}\label{ch:conclusion}
 
 \section{Lessons Learned}\label{sec:lessons}
 
-This article has demonstrated multi-agent orchestration across five complementary dimensions:
-architecture topologies (Chapter~\ref{ch:architectures}), framework selection
-(Chapter~\ref{ch:frameworks}), production engineering (Chapter~\ref{ch:production}),
-multilingual typesetting (Chapter~\ref{ch:bidi}), and a self-referential case study
-(Chapter~\ref{ch:casestudy}). Several conclusions emerge from this survey.
-
 \textbf{Specialization beats generalism.}
-Assigning dedicated agents to research, writing, editing, and LaTeX production consistently
-outperforms a single monolithic prompt. Each agent optimizes for its domain, applies
-focused tools, and produces output that the next stage can reliably consume. The quality
-improvement is measurable: citation accuracy, prose clarity, and typesetting correctness
-all improve when each is owned by a specialist \cite{CrewAI2024}.
+Throughout this article, the distinction between monolithic agent systems and role-specialized orchestrated teams has emerged as foundational. The multi-agent pipeline studied in Chapter~\ref{ch:casestudy} demonstrates that assigning each agent a narrow, well-defined role---Researcher, Writer, Editor, LaTeX Producer---yields superior output quality compared to generic LLM invocations. Specialized agents benefit from role-anchored prompts, backstory context, and tool sets tuned to their specific tasks. Moreover, specialization enables monitoring and error recovery: when a specialized agent fails, the root cause is localized to that agent's responsibility domain, rather than scattered across a monolithic system \cite{CrewAI2024}.
 
 \textbf{Explicit contracts enable reliability.}
-The most fragile multi-agent systems are those where agents make assumptions about their
-inputs. Robust pipelines define explicit input/output contracts per agent: expected format,
-token budget, required fields, and error conditions. When a stage deviates from its contract,
-the orchestrator detects the deviation and can retry, escalate, or fall back gracefully
-\cite{Segal2026}.
+Configuration-driven orchestration, detailed in Chapter~\ref{ch:production}, is not optional elegance but rather essential infrastructure. Token budgets, rate limits, timeout thresholds, and retry policies must be specified in configuration JSON, never hardcoded. These contracts between the orchestrator and its agents create a shared understanding of resource constraints and failure modes. When an agent knows it has a \(5\)-second timeout and a \(2000\)-token quota, it can structure its work accordingly. Conversely, when orchestration parameters live in code, they become invisible to human operators, and system behavior becomes unpredictable under load.
 
 \textbf{Prompt engineering is infrastructure.}
-Agent behavior is determined by prompts. Vague prompts produce inconsistent outputs; precise,
-rule-laden prompts produce reliable outputs. The v1.07 rule set embedded in this pipeline
-(R1--R10 per LaTeX task) reduced compilation errors from multiple per run to zero per run.
-Prompt engineering deserves the same versioning, testing, and review discipline as code.
+The quality of an orchestrated system depends not only on task design and agent roles but on the precision of system prompts. Each agent's role, goal, and backstory definition shapes its behavior in ways as significant as any code change. Reusable prompt patterns---including explicit instructions for BiDi handling (Chapter~\ref{ch:bidi}), citation formatting, and multi-language synthesis---must be documented as first-class artifacts, not afterthoughts. This elevation of prompts to infrastructure status reflects a maturing field: prompt engineering is engineering, and it must be version-controlled, tested, and audited \cite{Anthropic2024b}.
 
-\textbf{BiDi is non-trivial.}
-Generating Hebrew--English documents with a multi-agent system requires explicit rules at
-every level: citation wrapping with \texttt{\textbackslash mbox}, English terms inside
-\texttt{\textbackslash texthebrew} wrapped with \texttt{\textbackslash foreignlanguage}, and
-four compilation passes for cross-reference settlement. These rules cannot be inferred; they
-must be embedded in agent skills and enforced by the pipeline \cite{Polyglossia2023}.
+\textbf{BiDi requires explicit rules.}
+Multilingual orchestration, particularly when mixing right-to-left and left-to-right text, demands explicit rules in every component: agent prompts must use \texttt{[EN:...]} markers to protect embedded English technical terms, markdown-to-LaTeX converters must handle directionality transitions, and LaTeX compilation must employ BiDi-aware packages like Polyglossia. BiDi is not a feature that emerges from general-purpose LLM behavior; it must be engineered throughout the pipeline. The lessons from Chapter~\ref{ch:bidi} show that relying on implicit handling leads to subtle character reversals and layout corruption \cite{Polyglossia2023}.
 
 \section{Future Directions}\label{sec:future}
 
-Several directions merit further investigation. \textbf{Dynamic topology selection}—choosing
-sequential, hierarchical, or parallel execution based on task complexity at runtime—would
-reduce latency for simple documents while preserving quality for complex ones. \textbf{Agent
-self-correction loops}, where each agent inspects its own output against known constraints
-before passing it downstream, would reduce error propagation. \textbf{Multi-provider
-orchestration}—routing different agents to different LLM providers based on cost,
-capability, and latency—would improve cost efficiency and resilience.
+The multi-agent orchestration landscape is rapidly evolving. Three promising research directions deserve attention:
 
-The convergence of capable language models, mature orchestration frameworks like CrewAI and
-LangChain, and expressive typesetting systems like LuaLaTeX opens a new class of document
-production workflows. This article is itself a proof of concept: it was researched, drafted,
-edited, and typeset by an orchestrated agent team, demonstrating that production-quality
-technical documents can emerge from well-engineered multi-agent pipelines \cite{Segal2026}.
+\textbf{Dynamic topology selection.}
+The topologies discussed in Chapter~\ref{ch:architectures}---hierarchical, peer-to-peer, fan-out/fan-in---are currently static, chosen at design time. Future systems should select topology dynamically based on task characteristics and runtime state. For example, a research task could initially fan-out queries across multiple specialized search agents, collect results, then sequentially refine findings through a writer-editor pipeline. Topology adaptation would allow orchestration systems to balance parallelism and coordination overhead automatically, potentially reducing end-to-end latency and token consumption \cite{Wang2023}.
+
+\textbf{Agent self-correction loops.}
+Today's orchestrated systems assume agents produce correct outputs on the first attempt. LangGraph and related frameworks enable iterative refinement, where an agent's output is fed through a quality gate (another agent or automated validator) and, if substandard, returned to the original agent for revision. Scaling this pattern across an entire multi-agent system---where the Editor agent can trigger the Writer agent to revise, which may trigger the Researcher to refine sources---creates a self-healing architecture. Self-correction loops will likely become standard, driven by the economics of token reuse versus raw token expenditure on new attempts.
+
+\textbf{Multi-provider orchestration.}
+The creeping standardization of LLM APIs across Anthropic, OpenAI, and open-source providers suggests that future orchestration systems should be provider-agnostic. Rather than locking all agents to a single LLM vendor, the Gatekeeper (Chapter~\ref{ch:production}) should route different agents to different providers based on cost, latency, and capability profiles. A research agent might prefer a model optimized for long context; a writing agent might optimize for style consistency. This multi-provider strategy requires robust fallback logic and cross-provider compatibility testing, but offers resilience and cost optimization benefits.
+
+These three directions---topology adaptation, self-correction, and provider flexibility---converge on a theme: orchestration systems of the future will be less rigidly designed and more responsive to operational reality. The case study in Chapter~\ref{ch:casestudy}, which demonstrated a proof-of-concept four-agent pipeline, is itself an artifact of this evolution. The pipeline's design choices (sequential topology, role specialization, explicit configuration) reflect current best practices. A system built in 2027 or 2028 will likely adapt that topology in real time, self-correct outputs iteratively, and distribute compute across multiple LLM providers. The principles articulated in this article---specialization, explicit contracts, infrastructure-grade prompt engineering, and BiDi rigor---will remain foundational. The mechanisms through which they are realized will become more sophisticated.
 
 \nocite{AutoGen2023,Wang2023,WeiEtAl2022,Shinn2023,WooldridgeJennings1995,AMS2023}

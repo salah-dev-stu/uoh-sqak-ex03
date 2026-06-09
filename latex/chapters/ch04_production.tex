@@ -1,125 +1,156 @@
 \chapter{Production Patterns and Challenges}\label{ch:production}
 
-Multi-agent systems deployed to production face constraints absent in research prototypes: token budgets, rate limits, fault cascades, and cost overruns. This chapter examines five critical patterns for building reliable, cost-efficient orchestration systems \cite{Segal2026}.
+Production multi-agent systems operate at scales that demand explicit attention to cost, reliability, and observability. This chapter explores the operational patterns that distinguish experimental prototypes from production-grade orchestrated systems.
 
-\section{Rate Limiting and Token Budgets}\label{sec:ratelimit}
+\section{Rate Limiting and Token Budget Management}
 
-Every API call to an LLM incurs token costs and rate-limit exposure. A naive multi-agent system invoking agents in parallel without budget awareness can rapidly exhaust both quota and budget. Production systems must track token consumption per agent, enforce budget ceilings, and degrade gracefully when limits approach.
+Token consumption in multi-agent pipelines grows nonlinearly with agent count and task complexity. An uncontrolled system can exhaust its budget in a single failed orchestration run, leaving no tokens for recovery or exploration. Budget management requires two mechanisms: allocation and enforcement.
 
-Define the token budget formula as follows. For a system with $K$ agents, each agent $k$ receives a fixed allocation. The total token spend across all agents is:
+\subsection{Token Budget Allocation Formula}
+
+The total token budget must be distributed across agents with reserves for retries and unexpected expansion:
 
 \begin{equation}
-T_{\mathrm{total}} = \sum_{k=1}^{K}\bigl(t_{k}^{\mathrm{in}} + t_{k}^{\mathrm{out}}\bigr)
-\label{eq:tokenbudget}
+B_{\text{total}} = \sum_{i=1}^{N} B_i + B_{\text{overhead}}
+\label{eq:token_budget}
 \end{equation}
 
-where $t_{k}^{\mathrm{in}}$ is input tokens for agent $k$ and $t_{k}^{\mathrm{out}}$ is output tokens. Each agent must declare its maximum allocation upfront. If actual consumption $T_{\mathrm{total}}^{\mathrm{actual}} > B_{\max}$, where $B_{\max}$ is the global budget, the orchestrator halts new agent invocations and escalates to fallback strategies: switch to a cheaper model, simplify task requirements, or escalate to human review \cite{LangChain2024a}.
-
-Rate limits impose a second constraint. API providers enforce limits per minute or per day. The orchestrator must:
-
-\begin{enumerate}
-\item Track request volume per time window per API key
-\item Queue excess requests instead of rejecting them
-\item Implement backpressure: pause new work submission if queue depth exceeds threshold
-\item Monitor quota depletion and alert at 75\% utilization
-\end{enumerate}
-
-\section{Gatekeeper Pattern}\label{sec:gatekeeper}
-
-A \textbf{gatekeeper} is a singleton component that mediates all external API calls. Rather than agents calling LLM APIs directly, agents invoke the gatekeeper, which enforces policy: token budgets, rate limits, authentication, cost tracking, and audit logging.
-
-The gatekeeper maintains two critical state objects:
-
+where $B_i$ is the quota for agent $i$, $N$ is the agent count, and $B_{\text{overhead}}$ is a buffer (typically 10\% of the main budget) reserved for failed retries. A typical distribution for a four-agent system (Researcher, Writer, Editor, LaTeX Producer) allocates:
 \begin{itemize}
-\item \textbf{Token ledger}: a per-agent counter incremented on every API call
-\item \textbf{Rate-limit state}: per-API-key request timestamps for the current time window
+  \item Researcher: 40\% (high due to web search and source synthesis)
+  \item Writer: 25\% (narrative generation)
+  \item Editor: 20\% (quality control loop)
+  \item LaTeX Producer: 10\% (final compilation validation)
+  \item Overhead reserve: 5\%
 \end{itemize}
 
-When an agent requests an API call, the gatekeeper checks:
+These quotas must live in configuration files (JSON or YAML), never hardcoded in source code. Configuration must specify:
+\begin{itemize}
+  \item \texttt{max\_tokens\_per\_agent}: hard ceiling for each agent invocation
+  \item \texttt{global\_rate\_limit}: tokens per minute across all agents
+  \item \texttt{circuit\_breaker\_threshold}: failure count before pausing
+  \item \texttt{token\_warning\_threshold}: percentage (e.g., 80\%) at which alerts fire
+\end{itemize}
 
-\begin{enumerate}
-\item Is agent $k$'s token budget exhausted?
-\item Has the API key hit its rate limit?
-\item Is the request well-formed (non-null inputs, valid parameters)?
-\end{enumerate}
+\cite{Anthropic2024b} emphasizes that configuration portability is a prerequisite for production systems: the grading infrastructure must be able to clone a repository and run the system on a fresh machine with identical behavior. Hardcoded token limits, API keys, or rate parameters prevent this.
 
-If any check fails, the gatekeeper returns an error response with a suggested retry delay. If all checks pass, the gatekeeper calls the API, logs the result (tokens used, latency, status), and returns the response to the agent. This centralized enforcement prevents agents from circumventing policy \cite{CrewAI2024}.
+\section{Cost Optimization and Tracking}
 
-\section{Retry and Circuit Breaker}\label{sec:retry}
-
-Transient failures are inevitable in production: network timeouts, temporary rate-limit hits, brief service outages. A naive retry strategy risks amplifying failures. A robust strategy uses \textbf{exponential backoff} and \textbf{circuit breakers}.
-
-\subsection{Exponential Backoff}
-
-When an API call fails with a retryable error (HTTP 429 rate-limit, HTTP 503 service unavailable), the orchestrator retries after a delay that grows exponentially. The delay after attempt $i$ is:
+Beyond tokens, financial cost must be explicitly tracked and bounded. Cost depends on both tokens and model selection. The cost formula is:
 
 \begin{equation}
-\text{delay}_i = \min\bigl(b \cdot 2^i, d_{\max}\bigr) + \text{jitter}
-\label{eq:backoff}
-\end{equation}
-
-where $b$ is the base delay (e.g., 1 second), $2^i$ is the exponential factor, $d_{\max}$ is the maximum delay (e.g., 60 seconds), and jitter is a random value in $[0, b)$ to desynchronize retries from multiple agents.
-
-\subsection{Circuit Breaker}
-
-If an agent fails consistently (e.g., fails 5 consecutive API calls), the circuit breaker opens: further calls to that agent are rejected immediately without attempting the API call. After a cool-down period (e.g., 30 seconds), the circuit transitions to half-open state, and one request is allowed. If it succeeds, the circuit closes and normal operation resumes. If it fails, the circuit opens again \cite{Segal2026}.
-
-This pattern prevents cascading failures: a broken downstream agent stops accepting work, protecting upstream agents from unnecessary wait time and cost.
-
-\section{Observability and Logging}\label{sec:logging}
-
-Production systems are opaque without comprehensive logging. Every significant event must be recorded: agent invocation, token consumption, tool calls, errors, retries, and decisions.
-
-Log entries must be machine-readable (JSON preferred) to enable downstream analytics, alerting, and cost reconciliation. Minimum fields for each log entry:
-
-\begin{table}[h]
-\centering
-\begin{tabular}{p{3cm} p{5cm}}
-\toprule
-\textbf{Field} & \textbf{Description} \\[5pt]
-\midrule
-\texttt{timestamp} & ISO 8601 datetime when event occurred \\[5pt]
-\texttt{agent\_id} & Identifier of agent that executed \\[5pt]
-\texttt{task\_id} & Identifier of task being executed \\[5pt]
-\texttt{event\_type} & \texttt{invoke}, \texttt{complete}, \texttt{error}, \texttt{retry} \\[5pt]
-\texttt{tokens\_used} & Input and output token counts \\[5pt]
-\texttt{status} & \texttt{success}, \texttt{failure}, \texttt{timeout} \\[5pt]
-\texttt{error\_message} & Detailed error if status is failure \\[5pt]
-\texttt{retry\_count} & Number of retry attempts before success \\[5pt]
-\texttt{latency\_ms} & Execution time in milliseconds \\[5pt]
-\bottomrule
-\end{tabular}
-\end{table}
-
-With this instrumentation, operators can reconstruct the system's behavior, diagnose failures, and audit cost. Historical logs enable forecasting: given past token consumption per agent, estimate future costs and adjust budgets preemptively \cite{Segal2026}.
-
-\section{Cost Optimization}\label{sec:costopt}
-
-Token costs dominate multi-agent system expenses. A 15-page article might require 50k input tokens and 10k output tokens across all agents. At Claude 3.5 Sonnet pricing (\$0.003 per 1k input, \$0.015 per 1k output), one article costs approximately:
-
-\begin{equation}
-C = (50000 \times 0.003) + (10000 \times 0.015) = 150 + 150 = \$0.30
+C = \sum_{k=1}^{K} \bigl( c_{\text{in}} \cdot t_{k}^{\text{in}} + c_{\text{out}} \cdot t_{k}^{\text{out}} \bigr)
 \label{eq:cost}
 \end{equation}
 
-At scale (100 articles per month), this grows to \$30 monthly. Several strategies reduce costs without sacrificing quality:
+where $K$ is the total number of API calls, $t_k^{\text{in}}$ is input tokens for call $k$, $t_k^{\text{out}}$ is output tokens, $c_{\text{in}}$ is the per-1M-token input price, and $c_{\text{out}}$ is the per-1M-token output price. This cost function must be evaluated after \emph{each} agent invocation, with running totals logged. If cost exceeds a budget threshold, the system must gracefully degrade: return the best-effort result (e.g., incomplete research or rough draft) rather than failing silently \cite{CrewAI2024}.
 
-\subsection{Model Selection Strategy}
+\section{The Gatekeeper Pattern}
 
-Reserve expensive, high-capability models (Claude 3.5 Opus) for complex reasoning tasks. Delegate routine tasks (formatting, citation assembly, simple editing) to cheaper models (Claude 3.5 Haiku). This tiered approach reduces average cost per task by 40--60\% while maintaining quality on critical steps \cite{LangChain2024a}.
+All external API calls must flow through a single Gatekeeper class. The Gatekeeper enforces:
+\begin{itemize}
+  \item Rate limiting: request queuing if rate limit would be exceeded
+  \item Token accounting: every API call updates the running token count
+  \item Retry logic: exponential backoff on transient failures
+  \item Circuit breaking: pause an API endpoint if failure rate exceeds threshold
+  \item Timeout enforcement: kill requests that exceed maximum duration
+\end{itemize}
 
-\subsection{Context Compression}
+The Gatekeeper is the \textbf{only} place in the codebase where an external API is invoked. No agent directly calls an LLM; all calls are mediated. This centralization enables global observability: log lines from the Gatekeeper form a complete audit trail of system behavior.
 
-Instead of passing full article drafts between agents, pass summarized context. For example, the Writer receives not the entire research notes but a 200-word summary highlighting key claims. This reduces input tokens by 70--80\% with minimal information loss.
+\section{Retry and Circuit Breaker Patterns}
 
-\subsection{Caching and Deduplication}
+Transient failures (network timeouts, temporary API unavailability) are common in multi-agent systems. Blind retries amplify cost; strategic retries with backoff and circuit breaking provide resilience.
 
-If the same research query is invoked multiple times, cache the result. Similarly, if two agents request similar summaries, serve from cache. Intelligent caching can reduce token costs by 30\% on typical workloads.
+\subsection{Exponential Backoff}
 
-\subsection{Batch Processing}
+When an API call fails, retry with exponential delays:
 
-Instead of generating one article at a time, queue 10 articles and have the Researcher process all of them in a batch request. Batch APIs from Claude offer 50\% token discounts, amortizing overhead across many requests \cite{Anthropic2024b}.
+\begin{equation}
+\text{delay}_n = \text{base\_delay} \times 2^{n} + \text{jitter}
+\label{eq:backoff}
+\end{equation}
 
-These strategies, applied together, reduce the per-article cost from \$0.30 to approximately \$0.12---a 60\% reduction---while maintaining output quality and throughput.
+where $n$ is the retry attempt number (starting at 0), and jitter is a random offset to prevent thundering herd. Typical parameters: base\_delay = 1 second, max retries = 4, jitter = 0--1 second. After the maximum retry count is exhausted, the system escalates: either fail the task (if critical) or return a fallback result (if non-critical).
 
-\nocite{OpenAI2023,Yao2023,Russell2020}
+\subsection{Circuit Breaker}
+
+If an agent fails repeatedly within a time window (e.g., 5 failures in 5 minutes), the circuit breaker \textbf{pauses} further invocations of that agent for a cooldown period (e.g., 5 minutes). This prevents cascading failures: a broken downstream API (e.g., a web search service) no longer drowns the system in repeated failed requests. After cooldown expires, the circuit breaker enters a \textit{half-open} state, allowing one trial request. If the trial succeeds, the circuit resets; if it fails, the cooldown restarts.
+
+\cite{LangGraph2024} demonstrates circuit breaker patterns in multi-agent graphs: failures at one node should not propagate to downstream nodes if the failure is transient.
+
+\section{Observability and Structured Logging}
+
+Production systems are opaque without detailed logging. Structured logging (JSON, not free-form text) enables automated analysis, alerting, and debugging.
+
+Every significant event must be logged with a consistent schema:
+\begin{itemize}
+  \item \textbf{timestamp}: ISO 8601 format (e.g., \texttt{2026-06-09T14:32:51.123Z})
+  \item \textbf{level}: DEBUG, INFO, WARNING, ERROR
+  \item \textbf{component}: which module or agent generated the event
+  \item \textbf{event\_type}: standardized event class (e.g., \texttt{task\_start}, \texttt{task\_complete}, \texttt{api\_call}, \texttt{error})
+  \item \textbf{duration\_ms}: elapsed time for the operation
+  \item \textbf{tokens\_consumed}: input and output token counts
+  \item \textbf{cost\_usd}: financial cost of the API call
+  \item \textbf{message}: human-readable description
+\end{itemize}
+
+Alert thresholds should be configured:
+\begin{itemize}
+  \item Agent response time \(> 30\) seconds: warning
+  \item Task failure rate \(> 5\%\) in a 5-minute window: alert
+  \item Token consumption \(> 90\%\) of allocated budget: escalate to high priority
+  \item API rate limit hit (HTTP 429): immediate backoff
+  \item Unhandled exception in agent loop: critical alert
+\end{itemize}
+
+Logs are the primary debugging artifact. When a production run fails, engineers analyze logs to reconstruct the exact sequence of events, API responses, and token consumption. Logs must be immutable, timestamped, and retained for at least 30 days \cite{Anthropic2024b}.
+
+\section{Configuration Management and Versioning}
+
+All mutable operational parameters must reside in configuration files, never embedded in source code. A typical configuration structure:
+
+\begin{verbatim}
+{
+  "version": "1.00",
+  "agents": {
+    "researcher": {
+      "rate_limit_rpm": 20,
+      "token_quota": 5000,
+      "timeout_seconds": 300,
+      "model": "claude-opus-4-8"
+    },
+    "writer": {
+      "rate_limit_rpm": 15,
+      "token_quota": 3000,
+      "timeout_seconds": 180
+    }
+  },
+  "logging": {
+    "level": "INFO",
+    "output_path": "logs/crew.jsonl"
+  },
+  "rate_limits": {
+    "global_rpm": 60,
+    "circuit_breaker_threshold": 5,
+    "circuit_breaker_window_seconds": 300,
+    "circuit_breaker_cooldown_seconds": 300
+  }
+}
+\end{verbatim}
+
+Version numbers must increment with every code change. Semantic versioning is followed: \texttt{1.00} (initial), \texttt{1.01} (patch), \texttt{2.00} (breaking change). The version is stored in both \texttt{pyproject.toml} and the configuration JSON. This enables precise reproduction: an engineer can checkout a specific git commit and know that the corresponding configuration file has the same version number.
+
+\section{Scaling Considerations}
+
+As orchestrated systems grow from experimental to production scale, bottlenecks emerge:
+
+\begin{itemize}
+  \item \textbf{Orchestrator becomes a bottleneck}: if a single process sequences all agent invocations, latency grows linearly with agent count. Solution: deploy multiple Orchestrator replicas with a message queue (e.g., Kafka, RabbitMQ) to fan out tasks.
+  
+  \item \textbf{Token accounting overhead}: tracking tokens in-memory is fast; persisting to a database on every call is slow. Solution: batch token updates, flushing every 60 seconds or when a threshold is reached.
+  
+  \item \textbf{Configuration hot-reload}: redeploying the entire system to change a rate limit is operationally expensive. Solution: push configuration to a centralized service (e.g., etcd, Consul) and reload on-the-fly without restarting agents.
+\end{itemize}
+
+Production multi-agent systems demand engineering rigor: explicit budgeting, centralized gating, detailed observability, and configuration management. These patterns separate toy prototypes from systems trusted in critical workflows \cite{CrewAI2024}.

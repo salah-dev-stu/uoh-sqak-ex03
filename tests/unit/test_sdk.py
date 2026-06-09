@@ -46,7 +46,7 @@ def full_config(tmp_path, monkeypatch):
 
 def test_sdk_version():
     from agent_article.sdk.sdk import ArticleSDK
-    assert ArticleSDK.version() == "1.07"
+    assert ArticleSDK.version() == "1.09"
 
 
 def test_sdk_generate_delegates_to_crew(full_config):

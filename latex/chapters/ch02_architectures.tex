@@ -1,82 +1,68 @@
 \chapter{Agent Architectures and Topologies}\label{ch:architectures}
 
-\section{Linear Sequential Topology}
+\section{Linear Sequential Architecture}\label{sec:linear-sequential}
 
-In sequential orchestration, agents execute in a defined order. Agent A completes its task and passes output to Agent B, which processes it and forwards results to Agent C. This topology guarantees deterministic execution and simplifies debugging---failure at step N halts the entire pipeline.
+The linear sequential topology is the simplest orchestration pattern: tasks execute in a fixed, predetermined order, and each task's output becomes the next task's input. This pattern is deterministic, easy to debug, and suitable for workflows where dependencies form a simple chain. In a linear pipeline, latency accumulates across stages; parallelism is zero because no two agents run simultaneously \cite{CrewAI2024}.
 
-\begin{figure}[H]\centering\resizebox{\textwidth}{!}{\input{figures/crew_architecture.tikz}}\caption{CrewAI multi-agent architecture.}\label{fig:crew_architecture}\end{figure}
+\begin{figure}[H]
+\centering
+\resizebox{\textwidth}{!}{\input{figures/crew_architecture.tikz}}
+\caption{CrewAI multi-agent architecture.}
+\label{fig:crew_architecture}
+\end{figure}
 
-\textit{Strengths}: Predictable, easy to trace, suitable for assembly-line workflows.
+The linear model works well for content generation pipelines. A researcher agent completes its task, producing a research document. The writer agent consumes that document and produces a draft. The editor agent refines the draft. Finally, a LaTeX producer agent converts the polished markdown to PDF. Each stage has explicit input and output contracts, reducing ambiguity. The downside is latency: if any single stage takes long, the entire pipeline stalls. There is no opportunity for parallelism to hide latency \cite{LangChain2024a}.
 
-\textit{Weaknesses}: Brittle---failure at any stage blocks downstream agents. Agents cannot parallelize work. Latency accumulates across all steps \cite{LangChain2024a}.
+\section{Hierarchical Manager-Worker Topology}\label{sec:hierarchical-manager}
 
-The total latency of a sequential pipeline is given by:
+Hierarchical orchestration introduces a central coordinator (the Manager) that delegates work to multiple worker agents. The Manager breaks a large task into subtasks, assigns each subtask to a worker, waits for all workers to complete, aggregates results, and moves to the next level of decomposition. This pattern enables partial parallelism: all workers at the same level run concurrently, though levels are sequential \cite{CrewAI2024}.
+
+For instance, if a Manager task is ``research five historical developments in AI'', the Manager spawns five worker Researcher agents in parallel, each investigating one development. Once all five complete, the Manager aggregates their findings into a consolidated research document. The next level—Writing—begins only when the aggregation finishes. This pattern balances simplicity with parallelism and is the de facto standard in CrewAI's process design \cite{LangChain2024a}.
+
+Hierarchical topology requires careful error handling. If one worker fails, the Manager must decide: retry the worker, skip the failed subtask, or abort the entire pipeline. These decisions are typically encoded in the process's exception handling logic.
+
+\section{Peer-to-Peer Consensus Topology}\label{sec:peer-to-peer}
+
+In a peer-to-peer topology, agents communicate directly without a central coordinator. Agents can route work to each other, negotiate on disagreements, and collectively converge on a solution. This topology is useful for debate and consensus scenarios: multiple specialist agents deliberate on a question, each offering a perspective, until agreement is reached or a voting threshold is met.
+
+Peer-to-peer systems are highly resilient (no single point of failure) and naturally distributed. However, they risk deadlock (agents waiting for each other indefinitely) and require explicit termination conditions. In practice, peer-to-peer orchestration is implemented as a custom graph in LangGraph, where agents are nodes and message-passing edges define communication channels \cite{LangGraph2024}.
+
+A concrete example: four specialist agents (Historian, Technologist, Ethicist, Economist) each evaluate a proposal from their perspective. They exchange critiques asynchronously until consensus is reached or a fixed number of rounds completes. The final agreed-upon judgment is the output.
+
+\section{Tool-Augmented Specialists Topology}\label{sec:tool-augmented}
+
+This topology equips each agent with a rich set of tools tailored to its specialty. Rather than agents calling other agents, they invoke domain-specific tools: a Researcher agent has web search, database query, and citation-parsing tools; a Writer agent has style-checking, paraphrasing, and grammar tools; an Editor agent has plagiarism detection and fact-checking tools. Tools are gated through a Gatekeeper to enforce rate limits and token budgets \cite{Anthropic2024b}.
+
+Tool-augmented specialists allow each agent to solve its portion of the problem independently without directly depending on other agents' outputs (though inputs may be provided upfront). This topology scales well: new tools can be added without modifying agent logic, and tool invocations are fully observable in logs. The trade-off is that agents cannot leverage each other's reasoning in real time; tool results must be synthesized at a higher level.
+
+\section{Topology Comparison}\label{sec:topology-comparison}
+
+Each topology presents distinct trade-offs in latency, parallelism, complexity, and suitability. The latency of a linear sequential pipeline is the sum of all task latencies:
+
 \begin{equation}
-L_{\mathrm{seq}}=\sum_{i=1}^{N}\ell_i\label{eq:pipeline_latency}
+L_{\mathrm{seq}} = \sum_{i=1}^{N} \ell_i
+\label{eq:pipeline_latency}
 \end{equation}
-where $\ell_i$ is the latency of agent $i$ and $N$ is the total number of agents in the pipeline. This linear accumulation makes sequential topologies unsuitable for latency-critical applications \cite{Segal2026}.
 
-\section{Hierarchical Manager-Worker Topology}
-
-Hierarchical systems designate one \textit{manager agent} that coordinates subordinate \textit{worker agents}. The manager decomposes tasks, assigns them to workers, aggregates results, and iterates if necessary. This mirrors organizational structures in human teams.
-
-\textit{Strengths}: Scalable---add workers without restructuring. Single point of policy enforcement. Clear delegation model.
-
-\textit{Weaknesses}: Manager becomes a bottleneck. Failure of the manager paralyzes the entire system \cite{Wooldridge2009}.
-
-The hierarchical topology enables a form of distributed control where the manager maintains a task queue and dispatches work to the pool of available workers. As workers complete their assigned tasks, they report status back to the manager, which updates global state and determines next steps. This architecture scales well when new workers are added dynamically, and monitoring becomes simpler since all control flows through a known manager component.
-
-\section{Peer-to-Peer Consensus Topology}
-
-All agents are peers. Each agent can initiate communication with any other agent. This maximizes flexibility but requires careful protocol design to avoid deadlocks or infinite loops.
-
-\textit{Strengths}: Most flexible. Agents can opportunistically collaborate. No single point of failure.
-
-\textit{Weaknesses}: Hardest to reason about. Requires protocol specification. Debugging is complex \cite{LangChain2024a}.
-
-In peer-to-peer topologies, consensus mechanisms ensure that all agents converge on a common understanding of the problem state. This is particularly valuable when agents have partial or conflicting information and must reach agreement before proceeding. Examples include voting protocols, Byzantine fault tolerance algorithms, and gossip-based aggregation \cite{Park2023}.
-
-\section{Tool-Augmented Specialists Topology}
-
-Specialized agents, each equipped with domain-specific tools, operate with minimal inter-agent coupling. Rather than agents communicating directly, they interact through shared tool interfaces. This topology emphasizes tool reuse and clean separation of concerns.
-
-For example, a researcher agent might have access to web search and academic database tools. A writer agent might use grammar checking and citation formatting tools. An editor agent might employ consistency verification and style guide enforcement tools. Each agent calls tools independently, and results are aggregated by a lightweight orchestrator.
-
-\textit{Strengths}: High specialization. Tools can be versioned and tested independently. Agents remain simple and focused.
-
-\textit{Weaknesses}: Requires robust tool infrastructure. Tool failures propagate. Tool chaining becomes complex with many agents \cite{CrewAI2024}.
-
-\section{Topology Comparison}
-
-The following table compares topologies across key dimensions:
+where $\ell_i$ is the latency of stage $i$ and $N$ is the number of stages. In contrast, hierarchical topology latency is bounded by the critical path: the slowest worker at each level, plus coordination overhead.
 
 \begin{longtable}{@{}p{2.8cm}p{2.8cm}p{2.6cm}p{2.0cm}p{3.9cm}@{}}
 \toprule
-\textbf{Topology} & \textbf{Latency} & \textbf{Parallelism} & \textbf{Complexity} & \textbf{Ideal For} \\[5pt]
+\textbf{Topology} & \textbf{Latency} & \textbf{Parallelism} & \textbf{Complexity} & \textbf{Ideal For} \\
+\midrule
 \endfirsthead
 \toprule
-\textbf{Topology} & \textbf{Latency} & \textbf{Parallelism} & \textbf{Complexity} & \textbf{Ideal For} \\[5pt]
-\endhead
+\textbf{Topology} & \textbf{Latency} & \textbf{Parallelism} & \textbf{Complexity} & \textbf{Ideal For} \\
 \midrule
-\endlastfoot
-
-Linear Sequential & $\sum_i \ell_i$ & None & Low & Assembly pipelines \\[5pt]
-Hierarchical & $O(n)$ & Limited & Medium & Organized teams \\[5pt]
-Peer-to-Peer & Dynamic & High & High & Consensus problems \\[5pt]
-Tool-Augmented & Variable & Medium & Medium & Specialist agents \\[5pt]
-Hybrid Layered & $O(\log n)$ & High & High & Production systems \\[5pt]
+\endhead
 \bottomrule
+\endlastfoot
+Linear Sequential & $\sum_i \ell_i$ & None & Low & Simple workflows \\[5pt]
+Hierarchical Manager-Worker & $\max(\ell_i)$ per level & Limited & Medium & Task decomposition \\[5pt]
+Peer-to-Peer Consensus & Variable & High & High & Debate scenarios \\[5pt]
+Tool-Augmented Specialists & $\sum \ell_i + \delta$ & Medium & High & Diverse expertise \\[5pt]
 \end{longtable}
 
-\section{Topology Selection Criteria}
+Linear sequential pipelines are simplest but inflexible; they are appropriate when tasks have strict dependencies and latency is not critical \cite{CrewAI2024}. Hierarchical topologies sacrifice some of that simplicity to enable parallelism at each level; they are suitable for problems that decompose naturally into independent subtasks. Peer-to-peer consensus is costly in complexity but invaluable for scenarios where multiple perspectives must be reconciled. Tool-augmented specialists allow maximum independence but require careful tool design and gating to avoid inconsistent outputs \cite{LangChain2024a}.
 
-Choose topology based on four factors:
-
-\begin{enumerate}
-\item \textbf{Task structure}: Are steps dependent or independent?
-\item \textbf{Reliability requirements}: Can the system tolerate agent failures?
-\item \textbf{Latency constraints}: Must results appear immediately?
-\item \textbf{Monitoring requirements}: How much observability is needed?
-\end{enumerate}
-
-For rapidly-drafted documents with tight deadlines, sequential topologies suffice. For high-reliability systems producing long-form content, hierarchical or hybrid approaches provide better fault tolerance. The choice of topology fundamentally shapes system reliability, cost, and maintainability \cite{Segal2026}.
+For production multi-agent systems, CrewAI's default hierarchical orchestration strikes a pragmatic balance: enough parallelism to hide latency, enough centralization to ensure observability and error control. The article generation pipeline described in \autoref{ch:case-study} uses a linear sequential topology because the problem naturally decomposes into sequential stages: research informs writing, writing informs editing, editing informs publication. Non-linear topologies would add complexity without proportional benefit \cite{Segal2026}, \cite{Microsoft2025}.
