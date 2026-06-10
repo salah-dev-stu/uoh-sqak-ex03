@@ -6,6 +6,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from agent_article.crew.latex_sanitizer import sanitize
 from agent_article.crew.prompt_builder import build_prompt
 from agent_article.shared.logging_fifo import StructuredLogger
 
@@ -46,7 +47,7 @@ def run_single_latex_task(task: Task, retries: int = 2) -> str:
         try:
             prompt = build_prompt(task)
             raw = task.agent.llm.call(prompt)
-            clean = clean_latex(raw)
+            clean = sanitize(clean_latex(raw))
             if not clean:
                 preview = (raw[:300].replace("\n", " ")) if raw else "<empty>"
                 _log.warning(f"[{tid}] attempt {attempt + 1}: empty LaTeX {out_path}. raw={preview!r}")
