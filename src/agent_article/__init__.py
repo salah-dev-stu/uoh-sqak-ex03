@@ -1,4 +1,5 @@
 """agent_article — HW3 CrewAI article generation pipeline."""
+from agent_article.shared.version import VERSION
 
-__version__ = "1.14"
+__version__ = VERSION
 __all__ = ["ArticleSDK"]

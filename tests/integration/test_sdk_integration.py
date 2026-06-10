@@ -47,6 +47,10 @@ def test_sdk_generate_returns_result(full_env):
     from agent_article.crew.article_crew import CrewResult
     from agent_article.sdk.sdk import ArticleSDK
     CrewResult(success=True, pdf_path="latex/output/uoh-sqak-article.pdf")
+    fake_pdf = full_env / "latex" / "output" / "main.pdf"
+    fake_pdf.parent.mkdir(parents=True, exist_ok=True)
+    fake_pdf.write_text("%PDF-1.4 fake")
+    crew_inst = MagicMock()
     with patch.object(cm, "ResearcherAgent", return_value=MagicMock()),\
          patch.object(cm, "WriterAgent", return_value=MagicMock()),\
          patch.object(cm, "EditorAgent", return_value=MagicMock()),\
@@ -54,8 +58,11 @@ def test_sdk_generate_returns_result(full_env):
          patch.object(cm, "build_write_task", return_value=MagicMock()),\
          patch.object(cm, "build_edit_task", return_value=MagicMock()),\
          patch.object(cm, "build_latex_tasks", return_value=[]),\
-         patch.object(cm, "Crew") as mock_crew:
-        mock_crew.return_value.kickoff.return_value = "done"
+         patch.object(cm, "run_latex_phase_parallel", return_value=None),\
+         patch.object(cm.ArticleCrew, "_generate_figures", return_value=None),\
+         patch.object(cm.ArticleCrew, "_compile_with_repair", return_value=fake_pdf),\
+         patch.object(cm, "Crew", return_value=crew_inst):
+        crew_inst.kickoff.return_value = "done"
         sdk = ArticleSDK()
         result = sdk.generate("AI Multi-Agent Systems")
     assert isinstance(result, CrewResult)

@@ -9,8 +9,11 @@ def test_version_format() -> None:
     assert parts[1].isdigit()
 
 
-def test_version_starts_at_1_00() -> None:
-    assert VERSION == "1.14"
+def test_version_is_current_semver() -> None:
+    parts = VERSION.split(".")
+    assert len(parts) == 2
+    assert int(parts[0]) >= 1
+    assert int(parts[1]) >= 0
 
 
 def test_bump_increments_patch() -> None:

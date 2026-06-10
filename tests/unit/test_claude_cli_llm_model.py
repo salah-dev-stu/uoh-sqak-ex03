@@ -13,6 +13,8 @@ def _mk_cfg(tmp_path, default_model="claude-haiku-4-5-20251001"):
         ("setup", {"version": "1.01", "default_model": default_model}),
         ("rate_limits", {"version": "1.01", "services": {"claude_cli": {
             "haiku_timeout_seconds": 300, "sonnet_timeout_seconds": 600}}}),
+        ("logging_config", {"version": "1.00", "log_dir": str(tmp_path / "logs"),
+                            "fifo_files": 5, "max_lines_per_file": 100, "level": "INFO"}),
     ]:
         (cfg_dir / f"{name}.json").write_text(json.dumps(data))
     cfg_mod.reload()

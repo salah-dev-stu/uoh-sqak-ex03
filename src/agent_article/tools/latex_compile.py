@@ -22,6 +22,7 @@ class LaTeXCompileTool(BaseTool):
         self._latex_dir = latex_dir or Path(cfg["main_file"]).parent
         self._compiler = cfg.get("compiler", "lualatex")
         self._biber = cfg.get("biber", "biber")
+        self._timeout = int(cfg.get("compile_timeout_seconds", 120))
         self._logger = StructuredLogger("latex_compile")
 
     @property
@@ -56,7 +57,7 @@ class LaTeXCompileTool(BaseTool):
             os.makedirs("/tmp/biber_par", exist_ok=True)
             return subprocess.run(
                 cmd, cwd=self._latex_dir,
-                capture_output=True, text=True, timeout=120, env=env,
+                capture_output=True, text=True, timeout=self._timeout, env=env,
             )
 
         result = ApiGatekeeper.instance().call("lualatex", _exec)

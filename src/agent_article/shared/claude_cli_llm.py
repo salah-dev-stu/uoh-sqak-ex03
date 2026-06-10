@@ -63,8 +63,14 @@ class ClaudeCLILLM(BaseLLM):
         else:
             prompt = str(messages)
 
+        from agent_article.shared.gatekeeper import ApiGatekeeper
+
         cmd = ["claude", "-p", prompt, "--model", self.model]
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=self.timeout)
+
+        def _exec() -> subprocess.CompletedProcess:
+            return subprocess.run(cmd, capture_output=True, text=True, timeout=self.timeout)
+
+        result = ApiGatekeeper.instance().call("claude_cli", _exec)
         if result.returncode != 0:
             raise RuntimeError(f"claude CLI failed: {result.stderr[:500]}")
         output = result.stdout.strip()

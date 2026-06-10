@@ -1,14 +1,11 @@
 """Unit tests for latex_sanitizer module."""
 from __future__ import annotations
 
-import pytest
-
 from agent_article.crew.latex_sanitizer import (
     fix_table_overflow,
     is_valid_latex_content,
     sanitize,
 )
-
 
 # ---------------------------------------------------------------------------
 # is_valid_latex_content

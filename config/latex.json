@@ -1,6 +1,7 @@
 {
-  "version": "1.01",
+  "version": "1.02",
   "max_repair_attempts": 3,
+  "compile_timeout_seconds": 120,
   "compiler": "/usr/local/texlive/2025/bin/universal-darwin/lualatex",
   "biber": "biber",
   "passes": 4,
