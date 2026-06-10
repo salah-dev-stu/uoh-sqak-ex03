@@ -1,6 +1,6 @@
 # TODO — HW3 Article Generation Pipeline
 
-**Total tasks: 650**
+**Total tasks: 724**
 **Minimum: 500 | Target: 650 | Floor (rubric): 500**
 
 Legend: `[ ]` = pending · `[x]` = done · `[-]` = skipped/N/A
@@ -829,3 +829,31 @@ Legend: `[ ]` = pending · `[x]` = done · `[-]` = skipped/N/A
 | FP-FR-09: ≤10 min wall-clock | T-707 – T-709 |
 | FP-FR-10: model field in tasks.json | T-666 |
 | FP-FR-11: Agent prompt quality rules | T-694 – T-698 |
+
+---
+
+## Phase 18: Post-Pipeline LaTeX Repair Loop (T-711 – T-724)
+
+### 18a — Design
+- [x] T-711: Brainstorm post-pipeline compile-and-fix loop; select hybrid approach (known-pattern first, agent re-prompt for unknowns)
+- [x] T-712: Write design spec `docs/superpowers/specs/2026-06-10-post-pipeline-latex-repair-design.md`
+- [x] T-713: Write implementation plan `docs/superpowers/plans/2026-06-10-latex-repair-loop.md`
+
+### 18b — latex_log_parser.py
+- [x] T-714: Write `tests/unit/test_latex_log_parser.py` (8 tests) — TDD red phase
+- [x] T-715: Implement `src/agent_article/crew/latex_log_parser.py` — `LatexError` dataclass + `parse()`
+- [x] T-716: Fix ruff violations + file-attribution reset on close-paren; all 8 tests pass
+
+### 18c — latex_patcher.py
+- [x] T-717: Write `tests/unit/test_latex_patcher.py` (9 tests) — TDD red phase
+- [x] T-718: Implement `src/agent_article/crew/latex_patcher.py` — regex fixes for `undefined_cmd`, `trailing_amp`, `extra_brace`
+
+### 18d — latex_repair_agent.py
+- [x] T-719: Write `tests/unit/test_latex_repair_agent.py` (6 tests) — TDD red phase
+- [x] T-720: Implement `src/agent_article/crew/latex_repair_agent.py` — LLM re-prompt for unknown errors
+
+### 18e — article_crew.py wiring
+- [x] T-721: Write `tests/unit/test_article_crew_repair.py` (5 tests) — TDD red phase
+- [x] T-722: Replace `_compile_pdf()` with `_compile_with_repair()` in `article_crew.py`
+- [x] T-723: Update `tests/unit/test_crew.py` mock target `_compile_pdf` → `_compile_with_repair`
+- [x] T-724: Add `max_repair_attempts: 3` to `config/latex.json`
