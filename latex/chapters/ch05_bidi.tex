@@ -15,57 +15,130 @@
 \label{ch:bidi}
 
 \begin{hebrew}
-פרק זה עוסק בסוגיית הדו-כיוניות במסמכי \foreignlanguage{english}{LaTeX} ובמערכות סוכנים — כיצד ניתן לשלב עברית ואנגלית באותו מסמך תוך שמירה על כיווניות נכונה, ציטוטים תקינים ותצוגה מקצועית של הפלט הסופי.
+פרק זה עוסק בסוגיית הדו-כיוניות במסמכי \foreignlanguage{english}{LaTeX}
+ובמערכות סוכנים --- כיצד ניתן לשלב עברית ואנגלית באותו מסמך תוך שמירה
+על כיווניות נכונה, ציטוטים תקינים ותצוגה מקצועית של הפלט הסופי.
 \end{hebrew}
 
+% -----------------------------------------------------------------------
 \section[\texthebrew{משמעות הדו-כיוניות}]{\texthebrew{משמעות הדו-כיוניות}\mbox{\setLTR\enspace\thesection}}
 \label{sec:bidi-meaning}
 
 \begin{hebrew}
-דו-כיוניות (\foreignlanguage{english}{BiDi} — \foreignlanguage{english}{Bidirectionality}) היא תכונה של מערכות עיבוד טקסט המאפשרת שילוב שפות הנכתבות מימין לשמאל (\foreignlanguage{english}{RTL}) עם שפות הנכתבות משמאל לימין (\foreignlanguage{english}{LTR}) באותו מסמך. תקן \foreignlanguage{english}{Unicode} מגדיר את האלגוריתם הדו-כיווני (\foreignlanguage{english}{Unicode Bidirectional Algorithm},~\foreignlanguage{english}{UBA}) הקובע כיצד רצפי תווים מעורבים מיוצגים ויזואלית \foreignlanguage{english}{\cite{Unicode2023}}.
+דו-כיוניות (\foreignlanguage{english}{BiDi} --- \foreignlanguage{english}{Bidirectionality})
+היא תכונה של מערכות עיבוד טקסט המאפשרת שילוב שפות הנכתבות מימין לשמאל
+(\foreignlanguage{english}{RTL}) עם שפות הנכתבות משמאל לימין
+(\foreignlanguage{english}{LTR}) באותו מסמך.
+תקן \foreignlanguage{english}{Unicode} מגדיר את האלגוריתם הדו-כיווני
+(\foreignlanguage{english}{Unicode Bidirectional Algorithm},
+\foreignlanguage{english}{UBA}) הקובע כיצד רצפי תווים מעורבים
+מיוצגים ויזואלית \foreignlanguage{english}{\cite{Unicode2023}}.
 
-עבור מסמכים אקדמיים הכתובים בעברית, אתגר הדו-כיוניות מתבטא בשלוש רמות: ברמת התו (כאשר ספרות לטיניות ואנגליות מופיעות בתוך מילים עבריות), ברמת המילה (כאשר שמות טכניים באנגלית משולבים במשפטים עבריים), וברמת הפסקה (כאשר ציטוטים מדעיים ושמות מחלקות בתכנות צריכים להישמר בכיוון \foreignlanguage{english}{LTR} גם בתוך הקשר עברי).
+עבור מסמכים אקדמיים הכתובים בעברית, אתגר הדו-כיוניות מתבטא בשלוש רמות:
+\textbf{ברמת התו} --- כאשר ספרות לטיניות ואנגליות מופיעות בתוך מילים עבריות;
+\textbf{ברמת המילה} --- כאשר שמות טכניים באנגלית כגון
+\foreignlanguage{english}{token}, \foreignlanguage{english}{prompt}
+ו-\foreignlanguage{english}{embedding} משולבים במשפטים עבריים;
+\textbf{וברמת הפסקה} --- כאשר ציטוטים מדעיים ושמות מחלקות בתכנות
+צריכים להישמר בכיוון \foreignlanguage{english}{LTR} גם בתוך הקשר עברי.
 
-במערכות סוכנים מבוססות-בינה מלאכותית, הבעיה מחריפה: כאשר סוכן \foreignlanguage{english}{AI} מייצר טקסט עברי ומשלב בו מונחים טכניים, הוא לא תמיד מוסיף פקודות \foreignlanguage{english}{LaTeX} מתאימות לניהול הכיווניות. לכן שלב עריכה אוטומטי לפני ההידור הופך לחיוני לאיכות הפלט הסופי.
+ד"ר סגל הדגיש \foreignlanguage{english}{\cite{Segal2026}}
+כי כתיבה בעברית מוערכת יותר בקורס,
+אך מצריכה טיפול מדויק בכיווניות טקסט ---
+בעיה שמערכות סוכנים מבוססות בינה מלאכותית
+אינן פותרות אוטומטית ללא הנחיה מפורשת.
+לפיכך, שלב עריכה ייעודי לפני ההידור הופך לחיוני לאיכות הפלט הסופי.
 \end{hebrew}
 
+% -----------------------------------------------------------------------
 \section[\texthebrew{פתרון \foreignlanguage{english}{LuaLaTeX} ו-\foreignlanguage{english}{Polyglossia}}]{\texthebrew{פתרון \foreignlanguage{english}{LuaLaTeX} ו-\foreignlanguage{english}{Polyglossia}}\mbox{\setLTR\enspace\thesection}}
 \label{sec:bidi-solution}
 
 \begin{hebrew}
-מנוע \foreignlanguage{english}{LuaLaTeX} בשילוב חבילת \foreignlanguage{english}{Polyglossia} מספק את הפתרון המועדף לעיבוד מסמכים דו-כיווניים בסביבת \foreignlanguage{english}{LaTeX} \foreignlanguage{english}{\cite{Polyglossia2023}}. חבילת \foreignlanguage{english}{Polyglossia} מחליפה את חבילת \foreignlanguage{english}{Babel} הוותיקה ומציעה תמיכה מלאה בעברית, כולל ניקוד, מספור עברי ומעברים חלקים בין שפות.
+מנוע \foreignlanguage{english}{LuaLaTeX} בשילוב חבילת
+\foreignlanguage{english}{Polyglossia}
+מספק את הפתרון המועדף לעיבוד מסמכים דו-כיווניים בסביבת
+\foreignlanguage{english}{LaTeX}
+\foreignlanguage{english}{\cite{Polyglossia2023}}.
+חבילת \foreignlanguage{english}{Polyglossia} מחליפה את חבילת
+\foreignlanguage{english}{Babel} הוותיקה ומציעה תמיכה מלאה בעברית,
+כולל ניקוד, מספור עברי, ומעברים חלקים בין שפות.
 
-ההגדרה הראשית בפרמבלה מציינת את השפה הראשית ואת השפה המשנית:
+ההגדרות הבסיסיות בפרמבלה מציינות את השפה הראשית ואת השפה המשנית:
 
 \foreignlanguage{english}{\texttt{\textbackslash setmainlanguage\{hebrew\}}}\\[4pt]
 \foreignlanguage{english}{\texttt{\textbackslash setotherlanguage\{english\}}}
 
-בתוך גוף המסמך, מעבר לבלוק עברי נעשה באמצעות:
+בתוך גוף המסמך, מעבר לבלוק עברי נעשה באמצעות הסביבה:
 
 \foreignlanguage{english}{\texttt{\textbackslash begin\{hebrew\}\ldots\textbackslash end\{hebrew\}}}
 
-לפסקאות ארוכות, ו-\foreignlanguage{english}{\texttt{\textbackslash foreignlanguage\{english\}\{\ldots\}}} לעטיפת מילים בודדות בתוך טקסט עברי. מנוע \foreignlanguage{english}{LuaLaTeX} תומך בגופני \foreignlanguage{english}{OpenType}, המאפשרים שימוש בגופנים עבריים איכותיים לתצוגה מדויקת של שתי השפות ללא עיוות ויזואלי \foreignlanguage{english}{\cite{Segal2026}}.
+לפסקאות ארוכות, ו-\foreignlanguage{english}{\texttt{\textbackslash foreignlanguage\{english\}\{\ldots\}}}
+לעטיפת מילים בודדות בתוך טקסט עברי.
+מנוע \foreignlanguage{english}{LuaLaTeX} תומך בגופני
+\foreignlanguage{english}{OpenType},
+המאפשרים שימוש בגופנים עבריים איכותיים לתצוגה מדויקת של שתי השפות
+ללא עיוות ויזואלי \foreignlanguage{english}{\cite{Segal2026}}.
+
+יתרון נוסף של \foreignlanguage{english}{LuaLaTeX} הוא תמיכה מובנית ב-\foreignlanguage{english}{UTF-8}:
+בניגוד ל-\foreignlanguage{english}{pdfLaTeX}, אשר מוגבל לקידוד \foreignlanguage{english}{ASCII}
+ואינו יכול לטפל ישירות בתווי \foreignlanguage{english}{Unicode},
+מנוע \foreignlanguage{english}{LuaLaTeX} קורא קבצי מקור עם תווים עבריים ישירות
+ללא המרות ביניים \foreignlanguage{english}{\cite{Polyglossia2023}}.
 \end{hebrew}
 
-\section[\texthebrew{אתגרי ייצור}]{\texthebrew{אתגרי ייצור}\mbox{\setLTR\enspace\thesection}}
+% -----------------------------------------------------------------------
+\section[\texthebrew{אתגרי ייצור בסביבה דו-כיוונית}]{\texthebrew{אתגרי ייצור בסביבה דו-כיוונית}\mbox{\setLTR\enspace\thesection}}
 \label{sec:bidi-production}
 
 \begin{hebrew}
-בסביבות ייצור, ניהול הדו-כיוניות מורכב יותר מאשר בעבודה ידנית. מספר אתגרים עיקריים אופייניים לפלט שמייצרות מערכות סוכנים:
+בבניית מערכת רב-סוכנית המייצרת מאמרים בעברית,
+נתקלנו במספר אתגרים מעשיים.
+מסגרת \foreignlanguage{english}{CrewAI}
+\foreignlanguage{english}{\cite{CrewAI2024}}
+מאפשרת הגדרת תפקידים, מטרות ורקע לכל סוכן בעברית,
+אך הסוכן עצמו עשוי לייצר פלט המשלב עברית ואנגלית
+בדרכים שאינן תואמות את כללי \foreignlanguage{english}{BiDi}.
 
-\textbf{ציטוטים דו-ספרתיים:} כאשר מספר ציטוט הוא דו-ספרתי (כגון~\foreignlanguage{english}{[10]}), אלגוריתם \foreignlanguage{english}{UBA} עלול להציגו כ-\foreignlanguage{english}{[01]}. הפתרון הוא עטיפת כל ציטוט בפקודת \foreignlanguage{english}{\texttt{\textbackslash foreignlanguage\{english\}\{\textbackslash cite\{key\}\}}} \foreignlanguage{english}{\cite{Unicode2023}}.
+\textbf{אתגר ראשון --- הפיכת אותיות לטיניות:}
+כאשר טקסט עברי מכיל רצף של תווים אנגליים שאינם עטופים בפקודת כיוון,
+אלגוריתם \foreignlanguage{english}{UBA} של \foreignlanguage{english}{Unicode}
+עלול להפוך את הסדר ולהציג את האותיות מימין לשמאל.
+הסוכן הכותב חייב לעטוף כל מונח טכני
+בפקודת \foreignlanguage{english}{\texttt{\textbackslash foreignlanguage\{english\}\{\ldots\}}}.
 
-\textbf{בלוקי קוד בתוך טקסט עברי:} שמות פונקציות, מחלקות ומשתנים חייבים להישמר בכיוון \foreignlanguage{english}{LTR}. עטיפתם בפקודה \foreignlanguage{english}{\texttt{\textbackslash foreignlanguage\{english\}\{\textbackslash texttt\{\ldots\}\}}} מבטיחה תצוגה נכונה ומונעת היפוך תווים.
+\textbf{אתגר שני --- ניהול ציטוטים:}
+מספר ציטוט כגון \foreignlanguage{english}{[10]}
+עלול להיות מוצג בטעות כ-\foreignlanguage{english}{[01]}
+כאשר הוא מופיע בתוך בלוק עברי \foreignlanguage{english}{\cite{Unicode2023}}.
+הפתרון הוא עטיפה עקבית של כל פקודת
+\foreignlanguage{english}{\texttt{\textbackslash cite\{\}}}
+בתוך
+\foreignlanguage{english}{\texttt{\textbackslash foreignlanguage\{english\}\{\textbackslash cite\{key\}\}}}.
 
-\textbf{פלט סוכנים לא מסומן:} סוכני \foreignlanguage{english}{AI} מייצרים לפעמים פסקאות שבהן עברית ואנגלית אינן מסומנות כהלכה. לכן, שלב עריכה אוטומטי — שמבצע סוכן העורך — מסרק את הפלט ומוסיף פקודות \foreignlanguage{english}{Polyglossia} במקומות הנדרשים לפני שסוכן \foreignlanguage{english}{LaTeX} מהדר את המסמך הסופי \foreignlanguage{english}{\cite{Anthropic2024b}}.
+\textbf{אתגר שלישי --- פלט סוכנים לא מסומן:}
+סוכני \foreignlanguage{english}{AI}
+\foreignlanguage{english}{\cite{Anthropic2024b}}
+מייצרים לפעמים פסקאות שבהן עברית ואנגלית אינן מסומנות כהלכה.
+לכן, שלב עריכה אוטומטי --- שמבצע סוכן העורך ---
+מסרק את הפלט ומוסיף פקודות \foreignlanguage{english}{Polyglossia}
+במקומות הנדרשים לפני שסוכן \foreignlanguage{english}{LaTeX}
+מהדר את המסמך הסופי.
 \end{hebrew}
 
 \addtocontents{toc}{\protect\etocstandardlines}\defaultheadingformat
 
+% -----------------------------------------------------------------------
 \section{Mixed-Language Example}
 \label{sec:bidi-mixed}
 
-The following table catalogs the core LuaLaTeX and Polyglossia commands used in this project for bidirectional text management. Each row shows the command name (in \texttt{\textbackslash texttt} notation per rule~R2), its purpose in the document pipeline, and a note on where or how it is applied. The table demonstrates that a small, disciplined set of directives eliminates the rendering errors that arise when Hebrew and English text coexist in a single LaTeX source.
+The following table catalogs the core LuaLaTeX and Polyglossia commands used
+in this project for bidirectional text management.
+Each row shows the command (in \texttt{teletype} notation per rule~R2),
+its purpose in the document pipeline, and a deployment note.
+The table demonstrates that a small, disciplined set of directives eliminates
+the rendering errors that arise when Hebrew and English text coexist in a single
+\LaTeX{} source file.
 
 \begin{longtable}{@{}p{3.8cm}p{5.8cm}p{4.0cm}@{}}
 \caption{Core LuaLaTeX and Polyglossia Commands for BiDi Text Management}
@@ -84,27 +157,57 @@ The following table catalogs the core LuaLaTeX and Polyglossia commands used in 
 \endfoot
 \bottomrule
 \endlastfoot
+%
 \texttt{\textbackslash setmainlanguage\{hebrew\}} &
-  Sets Hebrew as the primary document language; activates RTL paragraph direction and Hebrew hyphenation patterns throughout the document &
+  Sets Hebrew as the primary document language; activates RTL paragraph direction
+  and Hebrew hyphenation patterns throughout the document &
   Preamble only; required before any Hebrew body text \\[4pt]
+%
 \texttt{\textbackslash setotherlanguage\{english\}} &
-  Registers English as a secondary language, enabling \texttt{\textbackslash foreignlanguage\{english\}\{\ldots\}} in the document body &
+  Registers English as a secondary language, enabling
+  \texttt{\textbackslash foreignlanguage\{english\}\{\ldots\}}
+  anywhere in the document body &
   Preamble only \\[4pt]
+%
 \texttt{\textbackslash begin\{hebrew\}\ldots\textbackslash end\{hebrew\}} &
-  Opens a block-level Hebrew environment; all enclosed paragraphs are set RTL with proper Hebrew inter-word spacing and paragraph indentation &
+  Opens a block-level RTL environment; all enclosed paragraphs are typeset
+  right-to-left with Hebrew inter-word spacing and paragraph indentation &
   Full Hebrew sections inside an otherwise LTR chapter \\[4pt]
+%
 \texttt{\textbackslash foreignlanguage\{english\}\{\ldots\}} &
-  Marks an inline span as English inside a Hebrew context; prevents character reversal in RTL flow and preserves left-to-right glyph ordering &
-  Every English word or technical term inside \texttt{\textbackslash texthebrew\{\ldots\}} or a \texttt{hebrew} environment \\[4pt]
-\texttt{\textbackslash foreignlanguage} \texttt{\{english\}\{} \texttt{\textbackslash cite\{key\}\}} &
-  Forces LTR context for the citation; prevents the Unicode BiDi algorithm from reordering brackets and digits; keeps \texttt{[10]} as \texttt{[10]} rather than \texttt{[01]} &
-  Every \texttt{\textbackslash cite} reference inside a \texttt{hebrew} block \\[4pt]
+  Marks an inline span as English inside a Hebrew context;
+  prevents character reversal in RTL flow and preserves
+  left-to-right glyph ordering for technical terms &
+  Every English word or technical term inside a
+  \texttt{hebrew} environment or
+  \texttt{\textbackslash texthebrew\{\ldots\}} \\[4pt]
+%
+\texttt{\textbackslash foreignlanguage\{english\}} \texttt{\{\textbackslash cite\{key\}\}} &
+  Forces LTR context for the citation reference;
+  prevents the Unicode BiDi algorithm from reordering brackets and digits
+  (\texttt{[10]} must not render as \texttt{[01]}) &
+  Every \texttt{\textbackslash cite} inside a \texttt{hebrew} block \\[4pt]
+%
 \texttt{\textbackslash texthebrew\{\ldots\}} &
-  Inline Hebrew span inside an LTR paragraph; applies RTL shaping and Hebrew font selection to a short phrase without opening a full block environment &
+  Inline Hebrew span inside an LTR paragraph;
+  applies RTL shaping and Hebrew font selection to a short phrase
+  without opening a full block environment &
   English chapters with embedded Hebrew terms or proper nouns \\[4pt]
+%
 \texttt{\textbackslash setLTR} &
-  Forces LTR direction for a local scope; used via \texttt{\textbackslash mbox\{\textbackslash setLTR\textbackslash enspace\textbackslash thesection\}} placed beside Hebrew section titles to prevent section numbers from appearing mirrored &
+  Forces LTR direction for a local scope; used via
+  \texttt{\textbackslash mbox\{\textbackslash setLTR\textbackslash enspace\textbackslash thesection\}}
+  beside Hebrew section titles to prevent section numbers from appearing mirrored &
   Hebrew section headings only \\[4pt]
 \end{longtable}
 
-This project's agent pipeline enforces correct BiDi annotation automatically. After the Writer agent produces raw Markdown, the Editor agent applies a post-processing pass that inserts \texttt{\textbackslash foreignlanguage\{english\}\{\ldots\}} wrappers around all technical terms, \texttt{\textbackslash mbox\{\textbackslash cite\{\ldots\}\}} around every citation reference inside Hebrew paragraphs, and \texttt{\textbackslash foreignlanguage\{english\}\{\textbackslash texttt\{\ldots\}\}} around inline code fragments. Only after this annotation pass does the LaTeX Producer agent invoke the LuaLaTeX compiler for the four compilation passes required to settle cross-references and bibliography entries \cite{CrewAI2024}.
+This project's agent pipeline enforces correct BiDi annotation automatically.
+After the Writer agent produces raw Markdown, the Editor agent applies a
+post-processing pass that inserts
+\texttt{\textbackslash foreignlanguage\{english\}\{\ldots\}} wrappers around
+all technical terms, and
+\texttt{\textbackslash foreignlanguage\{english\}\{\textbackslash cite\{\ldots\}\}}
+around every citation reference inside Hebrew paragraphs.
+Only after this annotation pass does the LaTeX Producer agent invoke
+the LuaLaTeX compiler for the four compilation passes required to settle
+cross-references and bibliography entries \cite{CrewAI2024}.
