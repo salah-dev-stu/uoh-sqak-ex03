@@ -1,6 +1,5 @@
 # tests/unit/test_latex_log_parser.py
 """Tests for crew/latex_log_parser.py — LatexError + parse()."""
-from pathlib import Path
 
 
 def test_parse_returns_empty_for_clean_log(tmp_path):

@@ -32,7 +32,12 @@ def _classify(msg: str) -> str:
 
 
 def parse(log_path: Path) -> list[LatexError]:
-    """Read a LuaLaTeX log file; return all fatal errors as LatexError objects."""
+    """Read a LuaLaTeX log file; return all fatal errors as LatexError objects.
+
+    File attribution is best-effort and only tracks ``chapters/*.tex`` files.
+    Errors in main.tex or package files may be attributed to the last opened
+    chapter file or left as empty string.
+    """
     if not log_path.exists():
         return []
     lines = log_path.read_text(encoding="utf-8", errors="replace").splitlines()
@@ -42,6 +47,8 @@ def parse(log_path: Path) -> list[LatexError]:
         m = _FILE_OPEN.search(line)
         if m:
             current_file = m.group(1)
+        elif line.strip() == ")":
+            current_file = ""
         if not line.startswith("! "):
             continue
         err_line = 0
