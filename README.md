@@ -4,7 +4,7 @@
 **Students**: Salah Qadah (323039974) & Andalus Kalash (211435797) | Group: `uoh-sqak`  
 **Deadline**: 12 June 2026 23:59 | **Repo**: https://github.com/salah-dev-stu/uoh-sqak-ex03
 
-A CrewAI-powered multi-agent pipeline that researches, writes, edits, and compiles a 29-page academic LaTeX article on *Multi-Agent Orchestration Patterns* — in a single `ArticleSDK.generate()` call.
+A CrewAI-powered multi-agent pipeline that researches, writes, edits, and compiles a 30-page academic LaTeX article on *Multi-Agent Orchestration Patterns* — in a single `ArticleSDK.generate()` call.
 
 ---
 
@@ -20,43 +20,81 @@ A CrewAI-powered multi-agent pipeline that researches, writes, edits, and compil
 
 ![Table of Contents](assets/screenshots/pdf_p02.png)
 
-### Chapter 2 — TikZ Architecture Diagram
+### Chapter 2 — TikZ Sequential Architecture Diagram
 
-![Chapter 2 with TikZ diagram](assets/screenshots/pdf_p07.png)
+Chapter 2 opens with a TikZ block diagram of the linear sequential crew plus math formulas for sequential vs. parallel latency.
 
-### Chapter 2 — Agent Communication Network Graph
+![Chapter 2 with TikZ diagram and math](assets/screenshots/pdf_p07.png)
 
-![Agent communication network](assets/screenshots/pdf_network.png)
+---
 
-### Chapter 3 — Framework Radar Chart
+## Python-Generated Figures
 
-![Framework comparison radar chart](assets/screenshots/pdf_radar.png)
+All four figures below are produced entirely by code (`scripts/generate_figures.py`) on every pipeline run — no static images, no copy-paste from the web.
 
-### Chapter 4 — Token Consumption Heatmap
+### Agent Communication Network (networkx + matplotlib)
 
-![Token consumption heatmap](assets/screenshots/pdf_heatmap.png)
+Data flow through the four-agent pipeline: Researcher → Writer → Editor → LaTeX Producer. Directed edges carry task context; node size encodes relative token consumption.
 
-### Chapter 6 — Token Flow Diagram
+![Agent communication network — raw figure](assets/screenshots/pdf_network.png)
 
-![Token flow through pipeline](assets/screenshots/pdf_sankey.png)
+As rendered in the PDF (Chapter 2, p. 10):
 
-### Chapter 4 — Math Formulas
+![Network graph in PDF](assets/screenshots/pdf_p10_network.png)
 
-![Chapter 4 with math formulas](assets/screenshots/pdf_p14.png)
+### Framework Radar Chart (matplotlib polar)
 
-### Chapter 5 — Hebrew/BiDi Chapter (RTL)
+Comparison of LangChain, CrewAI, LangGraph, and AutoGen across six dimensions: Ease of Use, Flexibility, Ecosystem, State Management, Production Readiness, Community Support.
 
-![Chapter 5 Hebrew opener](assets/screenshots/pdf_p18.png)
+![Framework comparison radar chart — raw figure](assets/screenshots/pdf_radar.png)
 
-![Chapter 5 mixed-language table](assets/screenshots/pdf_p19.png)
+As rendered in the PDF (Chapter 3, p. 14):
 
-### Chapter 6 — Python-Generated Matplotlib Chart
+![Radar chart in PDF](assets/screenshots/pdf_p14_radar.png)
 
-![Pipeline latency chart](assets/screenshots/pdf_p23.png)
+### Token Consumption Heatmap (seaborn)
+
+Per-agent, per-pipeline-phase token breakdown (prompt tokens, completion tokens, tool calls, retry overhead). Darker cells = higher consumption. Generated fresh from live pipeline telemetry.
+
+![Token consumption heatmap — raw figure](assets/screenshots/pdf_heatmap.png)
+
+As rendered in the PDF (Chapter 4, p. 17):
+
+![Heatmap in PDF](assets/screenshots/pdf_p17_heatmap.png)
+
+### Token Flow Sankey Diagram (matplotlib Sankey)
+
+Tracks how tokens flow from each agent role through pipeline stages to the final LaTeX artifact. Edge width is proportional to token volume.
+
+![Token flow sankey diagram — raw figure](assets/screenshots/pdf_sankey.png)
+
+As rendered alongside the pipeline latency bar chart in the PDF (Chapter 6, p. 24):
+
+![Sankey + latency charts in PDF](assets/screenshots/pdf_p24_charts.png)
+
+---
+
+## More PDF Highlights
+
+### Chapter 4 — Math Formulas (LaTeX rendered)
+
+Rate-limiting budget formula and circuit-breaker probability expression, typeset as proper LaTeX math blocks (not plain text).
+
+![Chapter 4 math formulas](assets/screenshots/pdf_p15_math.png)
+
+### Chapter 5 — Hebrew/BiDi Chapter (RTL + LTR)
+
+Full RTL Hebrew chapter using LuaLaTeX + Polyglossia. Section headers, body text, and inline citations all flow right-to-left; English code snippets flip back to LTR automatically.
+
+![Chapter 5 Hebrew BiDi opener](assets/screenshots/pdf_p19_hebrew.png)
+
+![Chapter 5 mixed-language command table](assets/screenshots/pdf_p20_bidi_table.png)
 
 ### Bibliography (Clickable Citations)
 
-![Bibliography page](assets/screenshots/pdf_p28.png)
+Biber-processed `.bib` file; every `\cite{}` in the article hyperlinks to the corresponding entry here.
+
+![Bibliography page](assets/screenshots/pdf_p30_bib.png)
 
 ---
 
