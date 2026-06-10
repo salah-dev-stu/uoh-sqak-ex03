@@ -96,7 +96,7 @@ The following table catalogs the core LuaLaTeX and Polyglossia commands used in 
 \texttt{\textbackslash foreignlanguage\{english\}\{\ldots\}} &
   Marks an inline span as English inside a Hebrew context; prevents character reversal in RTL flow and preserves left-to-right glyph ordering &
   Every English word or technical term inside \texttt{\textbackslash texthebrew\{\ldots\}} or a \texttt{hebrew} environment \\[4pt]
-\texttt{\textbackslash foreignlanguage\{english\}\{\textbackslash cite\{key\}\}} &
+\texttt{\textbackslash foreignlanguage} \texttt{\{english\}\{} \texttt{\textbackslash cite\{key\}\}} &
   Forces LTR context for the citation; prevents the Unicode BiDi algorithm from reordering brackets and digits; keeps \texttt{[10]} as \texttt{[10]} rather than \texttt{[01]} &
   Every \texttt{\textbackslash cite} reference inside a \texttt{hebrew} block \\[4pt]
 \texttt{\textbackslash texthebrew\{\ldots\}} &
