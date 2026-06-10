@@ -37,7 +37,7 @@ def test_calls_4_subprocesses(tmp_path) -> None:
     from agent_article.tools.latex_compile import LaTeXCompileTool
     calls = []
 
-    def fake_run(cmd, cwd, capture_output, text, timeout):
+    def fake_run(cmd, cwd, capture_output, text, timeout, **kwargs):
         calls.append(cmd[0])
         return _ok_result()
 
@@ -56,7 +56,7 @@ def test_calls_4_subprocesses(tmp_path) -> None:
 def test_raises_on_nonzero_returncode(tmp_path) -> None:
     from agent_article.tools.latex_compile import LaTeXCompileTool
 
-    def fail_run(cmd, cwd, capture_output, text, timeout):
+    def fail_run(cmd, cwd, capture_output, text, timeout, **kwargs):
         return type("R", (), {"returncode": 1, "stdout": "", "stderr": "ERROR"})()
 
     latex_dir = tmp_path / "latex2"

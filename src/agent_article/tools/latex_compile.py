@@ -1,4 +1,5 @@
 """LaTeX compilation tool — lualatex → biber → lualatex → lualatex (4 passes)."""
+import os
 import subprocess
 from pathlib import Path
 from typing import Any
@@ -51,9 +52,11 @@ class LaTeXCompileTool(BaseTool):
         from agent_article.shared.gatekeeper import ApiGatekeeper
 
         def _exec() -> subprocess.CompletedProcess:
+            env = {**os.environ, "PAR_GLOBAL_TEMP": "/tmp/biber_par"}
+            os.makedirs("/tmp/biber_par", exist_ok=True)
             return subprocess.run(
                 cmd, cwd=self._latex_dir,
-                capture_output=True, text=True, timeout=120,
+                capture_output=True, text=True, timeout=120, env=env,
             )
 
         result = ApiGatekeeper.instance().call("lualatex", _exec)

@@ -4,7 +4,7 @@
 # On macOS with both 2025 and 2025basic installs, use the full 2025 install:
 TEXLIVE_BIN ?= /usr/local/texlive/2025/bin/universal-darwin
 LUALATEX    = $(TEXLIVE_BIN)/lualatex
-BIBER       = $(TEXLIVE_BIN)/biber
+BIBER       = PAR_GLOBAL_TEMP=/tmp/biber_par $(TEXLIVE_BIN)/biber
 
 MAIN        = main
 OUTPUT_DIR  = output
