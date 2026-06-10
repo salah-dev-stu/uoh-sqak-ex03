@@ -65,6 +65,8 @@
 
 % Hyperlinks
 \RequirePackage[colorlinks=true, linkcolor=uohblue, citecolor=uohblue, urlcolor=uohblue]{hyperref}
+% Allow URLs in bibliography to break at any character (prevents overfull hbox on long URLs)
+\RequirePackage{xurl}
 
 % etoc — enables per-chapter TOC entry style customisation (used by ch05 for RTL entries)
 % \etocstandardlines: use the report class's own \l@chapter/\l@section styles by default.

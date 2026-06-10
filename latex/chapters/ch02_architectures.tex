@@ -1,78 +1,76 @@
 \chapter{Agent Architectures and Topologies}\label{ch:architectures}
 
-\section{Linear Sequential Orchestration}\label{sec:linear_seq}
+\section{Foundational Agent Design}\label{sec:foundation}
 
-The simplest multi-agent orchestration pattern is linear sequential execution, where tasks flow through a chain of agents with strict ordering: Agent~A produces output, Agent~B consumes that output, then Agent~C processes Agent~B's result. This pattern mirrors traditional data pipelines and offers predictability and ease of reasoning about correctness. In a sequential research-to-writing-to-editing flow, causality is explicit: the writer cannot begin without the researcher's findings, and the editor works only on complete drafts. Bottleneck analysis is straightforward: the slowest agent determines the end-to-end latency \cite{CrewAI2024}.
+An agent in multi-agent systems is defined by four core components: role, goal, backstory, and tools \cite{CrewAI2024}. The role is a semantic identifier (\texttt{Senior Researcher}) that shapes behavior expectations. The goal specifies the agent's primary objective, constraining its decision-making. The backstory provides contextual expertise---\texttt{You have 20 years of experience in machine learning}---which primes the underlying LLM for domain-specific reasoning. Tools enumerate external capabilities the agent can invoke: web search APIs, databases, file systems, or specialized executors like LaTeX compilers.
 
-\begin{figure}[H]
-\centering
-\resizebox{\textwidth}{!}{\input{figures/crew_architecture.tikz}}
-\caption{CrewAI multi-agent architecture.}
-\label{fig:crew_architecture}
-\end{figure}
+This design decouples agent capability from base LLM training. A Claude or GPT-4 model, despite its broad knowledge, benefits enormously from explicit role constraints. An agent without a defined role behaves like a generalist. The same agent with \texttt{Research Analyst} role, a goal to \texttt{identify gaps in literature}, and a backstory emphasizing 15 years of domain expertise will produce substantially different outputs---more focused, deeper, and less prone to superficial synthesis \cite{CrewAI2024}.
 
-\begin{figure}[H]
-\centering
-\includegraphics[width=\textwidth]{figures/agent_network.png}
-\caption{Agent communication network: data flow through the pipeline. Circular nodes are CrewAI agents (sized by token budget); square nodes are file artefacts passed between stages.}
-\label{fig:agent-network}
-\end{figure}
+\section{Linear Sequential Execution}\label{sec:linear_sequential}
 
-Sequential execution is the default process model in CrewAI, implemented via the \texttt{Process.SEQUENTIAL} enum. Tasks are defined in dependency order; the framework enforces the ordering. However, this simplicity comes at a cost: parallelization opportunities are lost. If Agent~A finishes early and Agent~C is ready to begin, Agent~C must wait for Agent~B to complete its portion of the work. For large orchestrations with independent subtasks, this serialization creates substantial idle time.
+Sequential execution represents the simplest orchestration topology: tasks execute in a defined linear order. Task 2 receives outputs from Task 1; Task 3 receives outputs from Task 2. This topology mirrors workflows with clear dependencies: research $\to$ writing $\to$ editing $\to$ publication. Sequential topology guarantees that each downstream task has all prerequisite information. The downside is latency: if ten tasks are defined, execution time is the sum of all task durations.
 
-The total latency of a linear pipeline is the sum of individual agent latencies, expressed formally as:
+\begin{figure}[H]\centering\resizebox{\textwidth}{!}{\input{figures/crew_architecture.tikz}}\caption{CrewAI multi-agent architecture.}\label{fig:crew_architecture}\end{figure}
+
+Sequential topology is ideal when output quality depends on prior task completion and refinement \cite{CrewAI2024}. The latency cost for a linear pipeline can be expressed as:
+
 \begin{equation}
-L_{\mathrm{seq}} = \sum_{i=1}^{N} \ell_i
+L_{\mathrm{seq}}=\sum_{i=1}^{N}\ell_i
 \label{eq:pipeline_latency}
 \end{equation}
-where $\ell_i$ is the latency of agent $i$ and $N$ is the number of agents. Token consumption is also cumulative: each agent's output contributes to the input context for all downstream agents.
 
-\section{Hierarchical Manager-Worker Pattern}\label{sec:hierarchical}
+where $\ell_i$ denotes the execution time of task $i$. This formula illustrates the fundamental constraint: total latency equals the sum of individual task latencies, with no opportunity for parallelization.
 
-To address serialization bottlenecks, hierarchical orchestration introduces a manager agent responsible for task decomposition and delegation. Rather than a fixed task sequence, the manager dynamically decides which agents to invoke and in what order. Given a goal like \emph{``Write a comprehensive article on AI safety,''} the manager might decompose this into research (invoke Researcher Agent), outline generation (invoke Outliner Agent), and draft writing (invoke Writer Agent), and may choose to run the Researcher and Outliner in parallel before routing their outputs to the Writer.
+\section{Hierarchical Manager-Worker Architecture}\label{sec:hierarchical}
 
-The manager agent receives the overall objective and uses language model reasoning to plan the task decomposition. This flexibility adapts to problem complexity: a simpler task might invoke only two agents in sequence, while a complex task spawns six agents with multiple parallelism opportunities. CrewAI's \texttt{Process.HIERARCHICAL} mode implements this pattern \cite{CrewAI2024}.
+Hierarchical execution follows an organizational pattern: a manager agent receives the primary task and breaks it into subtasks, delegating each to specialist worker agents. The manager collects results, synthesizes them, and returns a composite answer. This topology mirrors organizational structure: a project manager delegates design to architects, implementation to engineers, and testing to QA. Hierarchical topology enables scale: the manager need not know all task details; it delegates intelligently based on worker expertise.
 
-The tradeoff is increased cognitive overhead: the manager must reason about task dependencies, estimate which agents suit which subtasks, and synthesize results across multiple agents. Token consumption increases because the manager must understand all agent outputs to make routing decisions. For small teams (3--4 agents), hierarchical overhead is modest; for large teams (10+ agents), manager bottleneck effects emerge.
+The downside is manager overhead: the manager's reasoning about task decomposition adds latency and requires sufficient domain knowledge to make intelligent routing decisions. In practice, hierarchical topologies work well when the problem decomposes naturally into independent subtasks and the manager can abstract over worker outputs without loss of fidelity \cite{LangGraph2024}.
 
-\section{Peer-to-Peer Consensus Topologies}\label{sec:peer_consensus}
+\section{Peer-to-Peer Consensus Mechanisms}\label{sec:peertopeer}
 
-Consensus topologies eliminate a central manager and instead employ voting or merging mechanisms to reconcile outputs from independent agents. Multiple agents independently tackle the same task, and results are combined via majority vote (for classification tasks) or averaging (for numerical outputs). This pattern increases robustness: if one agent hallucinates a citation, other agents may find the correct source, and a majority vote filters out the erroneous claim.
+Peer-to-peer topologies treat all agents symmetrically, with no distinguished manager. Agents communicate to reach consensus through debate, voting, or iterative refinement. This approach is inspired by democratic decision-making and ensemble methods in machine learning. Peer-to-peer topologies excel at high-quality outputs in ambiguous domains: multiple expert perspectives reduce individual bias and produce more robust conclusions \cite{Yao2023}.
 
-Consensus is particularly valuable in quality-critical verification. Asking three independent agents \emph{``Is this citation format correct?''} and accepting the majority vote creates a higher-confidence signal than any single agent \cite{LangGraph2024}. The cost is multiplicative token consumption: running the same task on $k$ agents costs $k \times$ the single-agent token budget.
+The trade-off is complexity: peer-to-peer requires explicit consensus protocols (voting rules, debate termination conditions) and can introduce latency if many rounds of communication are needed. Additionally, agents must be designed to tolerate disagreement and participate constructively in deliberation rather than dominance-seeking behavior.
 
-Peer networks are most effective for verification and cross-checking tasks, not for complex orchestrations with dependencies. They work poorly when task decomposition is necessary: multiple agents voting on what subtasks exist does not yield a sensible plan.
+\section{Tool-Augmented Specialist Agents}\label{sec:tool_augmented}
 
-\section{Tool-Augmented Specialists}\label{sec:tool_specialists}
+Tools are the mechanisms by which agents interact with the external world \cite{LangChain2024a}. A well-designed tool has four properties: name (\texttt{web\_search}), description (\texttt{Search the internet for information}), input schema (what parameters it accepts), and implementation (the actual code).
 
-Beyond process topology (sequential, hierarchical, consensus), agent capability depends on tool binding. A \textit{tool-augmented} agent is equipped with specific tools that shape what it can accomplish. A researcher agent bound to web search and bibliography tools can find sources but cannot compile LaTeX. A LaTeX agent bound only to compilation and file I/O tools cannot generate new content but can reliably produce PDF output.
+LangChain and CrewAI provide standardized tool interfaces, allowing agents to discover available tools from their descriptions and invoke them automatically. When an agent needs to search the web, it does not require explicit code for API calls; instead, it names the tool (\texttt{web\_search}) and specifies parameters (\texttt{query: artificial intelligence 2024}). The framework handles invocation, error handling, and result parsing \cite{LangChain2024a}.
 
-Tool binding serves multiple purposes \cite{CrewAI2024}: it constrains behavior (a researcher cannot invoke the LaTeX compiler, reducing off-task action), it specializes reasoning (the agent knows which tools are available and applies domain knowledge accordingly), and it prevents dangerous actions (a researcher agent cannot delete files or run arbitrary shell commands).
+This abstraction enables tool reuse and swapping. A researcher agent configured for web search can be reconfigured for database queries simply by swapping the tool definition. This flexibility is essential for configurable, maintainable multi-agent systems \cite{CrewAI2024}.
 
-Specialist agents paired with matched tool sets form a natural division of labor. The orchestration framework (hierarchical or consensus) then routes work to the agent best equipped for each task. This is the principle behind Agent as Code: agents are defined by their role (goal, backstory, constraints) and tools (capabilities), not by monolithic prompts attempting to prescribe all behavior.
+\section{State and Context Management}\label{sec:state}
 
-\section{Topology Comparison and Selection}\label{sec:topology_comparison}
+As agents execute tasks, context must flow between them. Early multi-agent systems managed state implicitly: Task 1's output became Task 2's input, passed as text. This approach is simple but fragile: agents receive context as unstructured strings, making it difficult to parse or validate.
 
-The choice of topology depends on problem structure and performance constraints. Table~\ref{tab:topology_comparison} summarizes key tradeoffs across the primary patterns \cite{Wooldridge2009, Microsoft2025}.
+Modern frameworks, especially LangGraph, make state explicit and structured. Each agent's execution consumes a state object (a dictionary or dataclass) and produces a new state. The orchestration layer validates state transitions, ensuring agents can only execute valid actions given the current state. This explicit state enables checkpointing: the system can save state at each step and resume from that point if a failure occurs \cite{LangGraph2024}.
+
+\section{Topology Comparison}\label{sec:topology_comparison}
+
+The following table compares execution topologies across five dimensions: topology name, latency characteristics, parallelism support, implementation complexity, and ideal use cases.
 
 \begin{longtable}{@{}p{2.8cm}p{2.8cm}p{2.6cm}p{2.0cm}p{3.9cm}@{}}
 \toprule
-Topology & Latency & Parallelism & Complexity & Ideal For \\[5pt]
-\midrule
+\textbf{Topology} & \textbf{Latency} & \textbf{Parallelism} & \textbf{Complexity} & \textbf{Ideal For} \\[5pt]
+\endfirsthead
+\toprule
+\textbf{Topology} & \textbf{Latency} & \textbf{Parallelism} & \textbf{Complexity} & \textbf{Ideal For} \\[5pt]
 \endhead
-Linear Sequential & $\sum \ell_i$ & None & Low & Dependent task chains \\[5pt]
-Hierarchical & Adaptive & Medium & High & Complex goal decomposition \\[5pt]
-Peer Consensus & $k \times \ell$ & Full (parallel votes) & Medium & Verification, quality assurance \\[5pt]
-Tool-Specialists & Depends on routing & Depends on topology & Medium & Domain-specific workflows \\[5pt]
+\midrule
+Linear Sequential & $\sum_i \ell_i$ & None & Low & Dependent tasks \\[5pt]
+Hierarchical & $\ell_{\mathrm{mgr}} + \sum_i \ell_i$ & Limited & Medium & Naturally decomposable \\[5pt]
+Peer-to-Peer & Depends on rounds & Full & High & Consensus and debate \\[5pt]
+DAG with Dependencies & Depth of DAG & Conditional & Medium & Mixed dependencies \\[5pt]
 \bottomrule
 \end{longtable}
 
-\textbf{Sequential} should be chosen when tasks have clear dependencies and token efficiency is paramount. Example: research feeds writing, writing feeds editing---a strict causal chain.
+Each topology trades off simplicity against capability. Sequential execution is straightforward to implement but suffers latency. Hierarchical execution adds reasoning overhead but enables work distribution. Peer-to-peer consensus maximizes parallelism and deliberation quality at the cost of coordination complexity. The choice of topology must reflect the problem structure, resource constraints, and output quality requirements.
 
-\textbf{Hierarchical} suits complex problems requiring adaptive decomposition. Example: writing an article on a novel topic where the manager must decide whether to first search for background material, generate an outline, or consult domain experts.
-
-\textbf{Consensus} is appropriate for quality gates and verification. Example: fact-checking citations across multiple agents before publishing.
-
-\textbf{Tool-Specialist} (often combined with another topology) aligns agent roles with available capabilities. This pattern is universal; every orchestration system uses it.
-
-In practice, production systems often employ hybrid topologies: a hierarchical top level with sequential subtask pipelines and consensus verification gates for critical claims. The key is aligning topology to problem structure, not forcing all problems into a single mold \cite{Segal2026}.
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.85\textwidth]{figures/agent_network.png}
+  \caption{Network graph of agent communication topology in a CrewAI sequential crew. Nodes represent agents; directed edges represent task context flow.}
+  \label{fig:agent_network}
+\end{figure}

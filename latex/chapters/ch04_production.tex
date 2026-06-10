@@ -1,121 +1,122 @@
 \chapter{Production Patterns and Challenges}\label{ch:production}
 
-Production deployment of multi-agent systems introduces constraints absent in research prototypes: cost control, rate limiting, fault tolerance, observability, and compliance. This chapter explores architectural patterns that address these production concerns.
+Building multi-agent orchestration systems for production environments introduces complexities absent from prototyping and research phases. This chapter examines the architectural patterns, operational constraints, and quality mechanisms that transform exploratory agents into reliable, scalable production systems. We focus on five critical pillars: rate limiting and token budgets, the gatekeeper pattern for API governance, retry and circuit-breaker resilience, observability and structured logging, and cost optimization strategies.
 
 \section{Rate Limiting and Token Budgets}
 
-Multi-agent orchestration consumes tokens at scale. A three-agent crew executing a research-write-edit pipeline across $K$ independent topics generates $3K$ LLM invocations. If each invocation averages $t_{\text{in}}$ input tokens and $t_{\text{out}}$ output tokens, and the Claude Opus model costs $c_{\text{in}}$ per input token and $c_{\text{out}}$ per output token, the total cost for all topics becomes:
+Token budgets represent a fundamental constraint in production LLM-driven systems. Unlike research prototypes that consume tokens freely, production deployments must enforce spending limits per agent, per task, and per entire orchestration run. CrewAI and LangChain both provide configuration hooks for rate limiting, but the responsibility for enforcement lies in the application layer \cite{CrewAI2024}.
+
+A token budget enforcement mechanism allocates tokens across the crew's agents proportionally to their complexity. The budget formula distributes available tokens according to agent priority and historical consumption:
 
 \begin{equation}
-T_{\text{total}} = \sum_{k=1}^{K} t_{k,\text{in}} + \sum_{k=1}^{K} t_{k,\text{out}}
+B_i = B_{\mathrm{total}} \cdot \frac{w_i}{\sum_{j=1}^{N} w_j}
 \label{eq:token_budget}
 \end{equation}
 
-To prevent runaway spending, production systems enforce a per-run token budget. CrewAI supports this via configuration; each agent declares a maximum token spend before refusing new invocations \cite{CrewAI2024}. The Gatekeeper (discussed below) intercepts all LLM calls and enforces the budget, throwing an exception if the cumulative token count exceeds the limit.
+where \(B_i\) is the budget for agent \(i\), \(B_{\mathrm{total}}\) is the total available tokens, \(w_i\) is the weight (priority or historical cost factor) for agent \(i\), and \(N\) is the number of agents. Weights are configured in JSON, never hardcoded.
 
-Beyond per-run budgets, rate limiting protects both the system and the LLM provider's rate limits. Anthropic's Claude API enforces per-minute request rate limits (e.g., 50 requests per minute for standard tier accounts). If a crew orchestrator spawns 20 parallel research agents, all querying Claude simultaneously, the system will hit rate limits and receive HTTP 429 responses. Production implementations use exponential backoff with jitter: on a 429 error, wait $2^{attempt}$ seconds plus random noise, then retry \cite{Segal2026}.
+Rate limiting operates at multiple layers:
 
-\begin{figure}[H]
-\centering
-\includegraphics[width=0.9\textwidth]{figures/token_heatmap.png}
-\caption{Token consumption heatmap across the four pipeline agents and four cost dimensions. Warmer colours indicate higher token usage; the Writer agent dominates completion tokens due to generating full chapter prose.}
-\label{fig:token-heatmap}
-\end{figure}
+\begin{enumerate}
+\item \textbf{Per-Agent Limits}: Each CrewAI agent declares a maximum token budget in \texttt{agents.json}.
+\item \textbf{Per-Task Limits}: Each task specifies input/output token expectations.
+\item \textbf{Global Circuit Breaker}: If cumulative spend exceeds \(B_{\mathrm{total}}\), the orchestration halts and logs the overage.
+\item \textbf{Provider Rate Limits}: Anthropic, OpenAI, and other providers enforce server-side rate limits; the application must respect backoff headers.
+\end{enumerate}
 
-\section{The Gatekeeper Pattern}
+In production, these limits prevent runaway costs and enable predictable budgeting. The gatekeeper pattern (Section \ref{sec:gatekeeper}) enforces these limits by intercepting all LLM calls.
 
-All external API calls—LLM invocations, web searches, file system writes, LaTeX compilations—flow through a single Gatekeeper object. The Gatekeeper serves as a policy enforcement layer: it checks rate limits, enforces token budgets, logs invocations, and may block calls that violate security policies (e.g., queries that would leak sensitive data).
+\section{Gatekeeper Pattern}\label{sec:gatekeeper}
 
-A minimal Gatekeeper interface looks as follows:
+The gatekeeper is a single-responsibility class that mediates all external API calls—LLM inference, web search, LaTeX compilation, and file I/O. By centralizing access control, the gatekeeper enforces rate limits, logs every interaction, and provides a single point for mocking in tests \cite{Segal2026}.
 
-\begin{tabular}{p{4cm}p{6cm}}
-\toprule
-\textbf{Method} & \textbf{Purpose} \\[5pt]
-\midrule
-\texttt{check\_rate\_limit()} & Block if too many requests in the last minute \\[5pt]
-\texttt{deduct\_tokens(in, out)} & Deduct from budget; throw if budget exhausted \\[5pt]
-\texttt{log\_call(agent, tool, args)} & Record invocation for audit trail \\[5pt]
-\texttt{check\_security\_policy(query)} & Reject queries matching blocklist patterns \\[5pt]
-\bottomrule
-\end{tabular}\\
+The gatekeeper pattern is formalized as a decorator or wrapper around LLM provider calls. In LangChain and CrewAI, the gatekeeper wraps the LLM instance or intercepts tool invocations. Key responsibilities:
 
-CrewAI agents do not invoke LLMs directly; instead, they ask the Gatekeeper for a wrapped LLM client. The wrapper transparently applies policies before and after each call. This pattern decouples policy logic from agent code, enabling policy changes without redeploying agents \cite{CrewAI2024}.
+\begin{itemize}
+\item \textbf{Token Accounting}: Track input and output tokens per call, sum against per-agent and global budgets.
+\item \textbf{Rate Limit Enforcement}: Reject or queue calls that would exceed configured limits.
+\item \textbf{Audit Logging}: Record caller, timestamp, tokens, cost, and result status.
+\item \textbf{Error Handling}: Catch and classify transient vs.\ permanent failures.
+\item \textbf{Metric Collection}: Export latency, throughput, and cost data for observability.
+\end{itemize}
+
+The gatekeeper does not make business decisions; it is purely administrative. This separation of concerns ensures that business logic (agent prompts, task definitions) remains isolated from infrastructure concerns (budgets, retries, logging).
 
 \section{Retry and Circuit Breaker}
 
-LLM APIs fail. Networks drop packets. Rate limits trigger. Production orchestration systems must distinguish between transient failures (retry) and permanent failures (circuit break).
+Transient failures are inevitable in distributed systems. Network timeouts, rate limit responses (HTTP 429), and temporary service outages are not logic errors; they are operational realities. The retry and circuit-breaker patterns address these gracefully \cite{LangChain2024a}.
 
-Transient failures—network timeouts, HTTP 429 rate-limit responses, momentary service unavailability—warrant exponential backoff retry. The probability of ultimate success after $n$ retries follows:
+A retry strategy specifies:
 
 \begin{equation}
-P_{\text{success}}(n) = 1 - \prod_{i=1}^{n} (1 - p_{\text{transient}})
+\text{Pr}[\text{retry } k] = \begin{cases} 1 & \text{if } k < K_{\max} \text{ and } f(\text{error}) \in \mathcal{T} \\ 0 & \text{otherwise} \end{cases}
 \label{eq:retry_probability}
 \end{equation}
 
-where $p_{\text{transient}}$ is the per-attempt success probability. With $p_{\text{transient}} = 0.9$ and $n = 3$ retries, $P_{\text{success}} \approx 0.999$.
+where \(K_{\max}\) is the maximum number of retries, \(\mathcal{T}\) is the set of transient error codes (429, 500, 502, 503, timeout), and \(f(\text{error})\) classifies the failure. The delay between retries typically follows exponential backoff: \(\Delta_k = \Delta_0 \cdot b^k\) with jitter to avoid thundering herd problems, where \(\Delta_0\) is the initial delay (e.g., 1 second), \(b\) is the backoff multiplier (e.g., 2), and \(k\) is the retry attempt number.
 
-Permanent failures—authentication errors, malformed requests, service deprecations—are signaled by specific HTTP status codes (401, 400, 410). Retrying these is futile; the system should immediately escalate to a human operator or trigger a circuit breaker.
+A circuit breaker wraps the retry logic. If failures accumulate faster than successes over a sliding window, the circuit opens: calls fail fast without attempting the underlying operation. This prevents cascading failures and gives the downstream service time to recover. The circuit breaker has three states:
 
-Circuit breaker logic works as follows:
 \begin{enumerate}
-\item \textbf{Closed state:} normal operation; all requests pass through.
-\item \textbf{Open state (triggered after $F$ failures in $W$ seconds):} block all requests for $D$ seconds (the backoff duration).
-\item \textbf{Half-open state:} after $D$ seconds, allow a single test request. If it succeeds, reset to Closed. If it fails, reopen.
+\item \textbf{Closed}: Normal operation; calls proceed normally. On failure, increment failure counter.
+\item \textbf{Open}: Too many failures detected; calls fail immediately with a \texttt{CircuitBreakerOpen} exception. A timer resets after a threshold duration (e.g., 60 seconds).
+\item \textbf{Half-Open}: Experimental state after the timer expires. A single call is allowed; if it succeeds, close the circuit. If it fails, reopen and reset the timer.
 \end{enumerate}
 
-This pattern prevents cascading failures: if Claude becomes unavailable, the circuit breaker stops hammering it after the first 5 failures, waiting $D$ seconds before testing recovery \cite{Segal2026}.
+In CrewAI and LangChain, these patterns are implemented via middleware or custom tool wrappers. The gatekeeper encapsulates both retry and circuit-breaker logic, providing a unified resilience interface.
 
 \section{Observability and Logging}
 
-Production systems must answer: ``What did my agents do?'' Observability requires structured logging of:
+Production systems must be observable: engineers must understand what the system is doing, why it made each decision, and where performance bottlenecks exist. Observability comprises three pillars: metrics (quantitative), logging (detailed records), and tracing (request-scoped causality).
 
-\begin{itemize}
-\item \textbf{Agent invocation:} which agent, with what task, at what time.
-\item \textbf{LLM calls:} which model, input/output tokens, latency, cost.
-\item \textbf{Tool usage:} which tool, arguments, return value, errors.
-\item \textbf{State transitions:} task queued \(\to\) in-progress \(\to\) completed/failed.
-\end{itemize}
-
-Rather than print statements, production code uses structured logging: each log entry is a JSON object with typed fields. A typical log entry:
-
-\begin{verbatim}
-{
-  "timestamp": "2026-06-09T14:23:15Z",
-  "agent": "researcher",
-  "action": "invoke_llm",
-  "model": "claude-opus-4-8",
-  "tokens_in": 2541,
-  "tokens_out": 891,
-  "latency_ms": 3200,
-  "cost_usd": 0.18,
-  "status": "success"
-}
-\end{verbatim}
-
-CrewAI integrates logging frameworks; LangChain/LangGraph provides callback hooks for instrumentation. The logs feed into a centralized sink (e.g., PostgreSQL, Elasticsearch) enabling post-hoc analysis: "How much did we spend on researcher agents last week?" or "Which tools failed most often?" \cite{CrewAI2024}.
-
-\section{Cost Optimization and Monitoring}
-
-The total cost of orchestration across $K$ tasks, with $A$ agents executing $T$ tasks per agent, is:
+A structured logging approach captures every significant event: agent initialization, task start/completion, LLM call details (prompt tokens, completion tokens, cost), tool invocation, error conditions, and final crew outcome. Each log entry is a JSON object with standard fields:
 
 \begin{equation}
-C_{\text{total}} = \sum_{a=1}^{A} \sum_{t=1}^{T} \bigl( c_{\text{in}} \cdot \tau_{a,t}^{\text{in}} + c_{\text{out}} \cdot \tau_{a,t}^{\text{out}} \bigr)
+\text{LogEntry} = \left\{ \text{timestamp}, \text{level}, \text{logger}, \text{message}, \text{context} \right\}
+\label{eq:log_entry}
+\end{equation}
+
+where \texttt{context} is a nested object carrying structured data (agent name, task ID, tokens consumed, latency milliseconds, etc.). Structured logs enable machine-readable filtering and aggregation; unstructured prose logs do not.
+
+Observability in CrewAI and LangChain is achieved via:
+
+\begin{itemize}
+\item \textbf{Callback Hooks}: Both frameworks provide callbacks that fire on agent/task/tool events. Register a callback that emits structured logs.
+\item \textbf{LLM Tracing}: LangChain LangSmith and CrewAI Telemetry export traces to external platforms.
+\item \textbf{Custom Handlers}: Extend logging.Handler (Python standard library) to route JSON logs to files, cloud services, or monitoring dashboards.
+\end{itemize}
+
+In production, logs flow to a centralized store (cloud logging, ELK stack, or similar). Operators set up alerts on error rates, latency percentiles, and cost anomalies.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.88\textwidth]{figures/token_heatmap.png}
+  \caption{Token consumption heatmap across agents and task phases. Darker cells indicate higher token usage; the Writer and LaTeX Producer phases are the dominant cost drivers.}
+  \label{fig:token_heatmap}
+\end{figure}
+
+\section{Cost Optimization}
+
+LLM inference is a variable operational cost. Model choice, prompt length, and call frequency all drive spending. A production system must optimize cost without sacrificing quality.
+
+Cost accrues from two sources: input tokens (the prompt) and output tokens (the completion). Different models have different pricing; longer prompts and completions consume more tokens. The cumulative cost for a crew run is:
+
+\begin{equation}
+C = \sum_{k=1}^{K} \bigl( c_{\mathrm{in}} \cdot t_k^{\mathrm{in}} + c_{\mathrm{out}} \cdot t_k^{\mathrm{out}} \bigr)
 \label{eq:cost_model}
 \end{equation}
 
-where $\tau_{a,t}^{\text{in}}$ and $\tau_{a,t}^{\text{out}}$ denote input and output tokens for agent $a$'s task $t$.
+where \(K\) is the total number of LLM calls, \(c_{\mathrm{in}}\) and \(c_{\mathrm{out}}\) are the per-token prices for input and output respectively, and \(t_k^{\mathrm{in}}\) and \(t_k^{\mathrm{out}}\) are tokens for the \(k\)-th call.
 
-Cost optimization strategies include:
+Optimization strategies include:
 
 \begin{itemize}
-\item \textbf{Skill injection via SKILL.md files:} Embedding domain knowledge externally reduces repetitive prompting and hallucination, lowering token consumption by 20--40\% \cite{CrewAI2024}.
-\item \textbf{Model selection by task:} Reserve Opus for complex reasoning (research synthesis); use cheaper Sonnet or Haiku for data preprocessing or formatting tasks.
-\item \textbf{Output caching:} If two tasks invoke the same prompt on the same context (e.g., citation verification), cache the LLM response to avoid duplicate tokens \cite{Anthropic2024b}.
-\item \textbf{Batching:} Process multiple topics in a single crew invocation rather than launching separate crews per topic, amortizing overhead.
+\item \textbf{Model Selection}: Use cheaper models (e.g., Claude Haiku) for lightweight tasks; reserve expensive models (Claude Opus) for complex reasoning \cite{Anthropic2024b}.
+\item \textbf{Prompt Caching}: If the same context appears in multiple calls, cache it at the API level to reduce input token cost.
+\item \textbf{Batch Processing}: Process multiple independent tasks in parallel to amortize fixed overhead.
+\item \textbf{Output Constraints}: Limit output length where quality permits; use max\_tokens or early-stopping directives.
 \end{itemize}
 
-Continuous monitoring of cost trends is essential. The Gatekeeper logs cost per agent, per tool, per hour. Weekly cost reports identify runaway spending before it balloons.
+CrewAI allows per-agent LLM configuration; different agents can use different models. LangChain's LCEL enables conditional routing: invoke a cheap model first, escalate to an expensive model only if the cheap result fails quality checks. These optimization techniques are configured in JSON, not hardcoded, so operators can tune costs without code changes.
 
-\section{Conclusion}
-
-Production multi-agent orchestration differs from research prototypes in rigor: cost control, explicit fault handling, comprehensive logging, and compliance auditing become non-negotiable. The Gatekeeper pattern centralizes policy enforcement; rate limiting and circuit breakers prevent cascade failures; structured logging enables observability and cost analysis. These patterns, though more complex than naive orchestration, are the foundation of reliable production systems \cite{Segal2026}.
+The interplay between CrewAI, LangChain, and LangGraph deserves mention here \cite{LangGraph2024}. In production, many teams deploy CrewAI for rapid prototyping, then migrate to LangGraph when state management and checkpointing become critical. LangChain serves as the lower-level abstraction layer underlying both. Understanding all three frameworks allows architects to select the right tool for each phase of the product lifecycle: exploration with CrewAI, hardening with LangGraph, and integration via LangChain \cite{CrewAI2024}, \cite{LangChain2024a}.
