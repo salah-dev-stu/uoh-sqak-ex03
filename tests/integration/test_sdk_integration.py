@@ -38,17 +38,18 @@ def full_env(tmp_path, monkeypatch):
     ]:
         (cfg_dir / f"{name}.json").write_text(json.dumps(data))
     monkeypatch.setattr(cfg_mod, "_CONFIG_DIR", cfg_dir)
+    monkeypatch.chdir(tmp_path)
     return tmp_path
 
 
-def test_sdk_generate_returns_result(full_env):
-    """SDK.generate() should return a CrewResult regardless of success/failure."""
+def test_sdk_generate_returns_result(full_env, monkeypatch):
+    """SDK.generate() should return a CrewResult with success=True."""
     import agent_article.crew.article_crew as cm
     from agent_article.crew.article_crew import CrewResult
     from agent_article.sdk.sdk import ArticleSDK
-    CrewResult(success=True, pdf_path="latex/output/uoh-sqak-article.pdf")
-    fake_pdf = full_env / "latex" / "output" / "main.pdf"
-    fake_pdf.parent.mkdir(parents=True, exist_ok=True)
+    out_dir = full_env / "latex" / "output"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    fake_pdf = out_dir / "main.pdf"
     fake_pdf.write_text("%PDF-1.4 fake")
     crew_inst = MagicMock()
     with patch.object(cm, "ResearcherAgent", return_value=MagicMock()),\

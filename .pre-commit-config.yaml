@@ -12,3 +12,8 @@ repos:
         language: system
         types: [python]
         pass_filenames: false
+      - id: check-pdf-size
+        name: Guard deliverable PDF against test stubs (min 50 KB)
+        entry: uv run python scripts/check_pdf_size.py
+        language: system
+        pass_filenames: false

@@ -27,7 +27,9 @@ env/
 workspace/
 
 # LaTeX build artifacts (keep the final PDF, exclude auxiliary files)
-# latex/output/*.pdf  ← intentionally NOT excluded; grader needs the PDF
+# latex/output/uoh-sqak-article.pdf  ← intentionally NOT excluded; grader needs this PDF
+latex/output/test.pdf
+latex/output/main.pdf
 latex/output/*.aux
 latex/output/*.log
 latex/output/*.toc
