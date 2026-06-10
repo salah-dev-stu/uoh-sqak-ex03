@@ -3,7 +3,8 @@ import sys
 from pathlib import Path
 
 MIN_BYTES = 50_000
-DELIVERABLE = Path("latex/output/uoh-sqak-article.pdf")
+_ROOT = Path(__file__).parent.parent
+DELIVERABLE = _ROOT / "latex" / "output" / "uoh-sqak-article.pdf"
 
 
 def main() -> int:
