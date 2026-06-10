@@ -72,7 +72,7 @@ def test_crew_run_success(tmp_path, monkeypatch):
         fake_pdf.write_bytes(b"%PDF")
         with patch.object(cm, "run_latex_phase_parallel", return_value=[]), \
              patch.object(crew, "_generate_figures", return_value=None), \
-             patch.object(crew, "_compile_pdf", return_value=fake_pdf):
+             patch.object(crew, "_compile_with_repair", return_value=fake_pdf):
             result = crew.run()
     assert result.success is True
     assert result.pdf_path.endswith("test.pdf")

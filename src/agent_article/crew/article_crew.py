@@ -75,7 +75,7 @@ class ArticleCrew:
             run_latex_phase_parallel(latex_tasks)
             self._generate_figures()
 
-            compiled = self._compile_pdf()
+            compiled = self._compile_with_repair()
             output_filename = cfg("setup", "output_filename", "uoh-sqak-article.pdf")
             pdf_path = Path("latex/output") / output_filename
             if compiled:
@@ -98,14 +98,39 @@ class ArticleCrew:
         except Exception as exc:
             _log.error(f"Figure generation failed (non-fatal): {exc}")
 
-    def _compile_pdf(self) -> Path | None:
-        """Run lualatex→biber→lualatex→lualatex and return compiled PDF path."""
+    def _compile_with_repair(self) -> Path | None:
+        """Compile LaTeX with up to max_repair_attempts; patch/re-prompt on failure."""
+        from agent_article.crew.latex_log_parser import parse as parse_log
+        from agent_article.crew.latex_patcher import apply as patch_errors
+        from agent_article.crew.latex_repair_agent import repair as repair_errors
         from agent_article.tools.latex_compile import LaTeXCompileTool
-        try:
-            tool = LaTeXCompileTool()
-            pdf = tool.run("main.tex")
-            _log.info(f"LaTeX compile succeeded: {pdf}")
-            return Path(pdf)
-        except Exception as exc:
-            _log.error(f"LaTeX compile failed: {exc}")
-            return None
+
+        latex_dir = Path(cfg("latex", "main_file", "latex/main.tex")).parent
+        max_attempts = cfg("latex", "max_repair_attempts", 3)
+        log_path = latex_dir / "output" / "main.log"
+        tool = LaTeXCompileTool()
+
+        for attempt in range(1, max_attempts + 1):
+            try:
+                pdf = tool.run("main.tex")
+                _log.info(f"LaTeX compile succeeded on attempt {attempt}: {pdf}")
+                return Path(pdf)
+            except Exception as exc:
+                _log.warning(f"Compile attempt {attempt}/{max_attempts} failed: {exc}")
+                if attempt == max_attempts:
+                    break
+                errors = parse_log(log_path)
+                if not errors:
+                    _log.error("No parseable errors in log; giving up")
+                    break
+                known = [e for e in errors if e.kind != "unknown"]
+                if known:
+                    n = patch_errors(known, latex_dir)
+                    _log.info(f"Patched {n} file(s) with {len(known)} known fix(es)")
+                if attempt >= 2:
+                    unknown_errs = [e for e in errors if e.kind == "unknown"]
+                    if unknown_errs:
+                        repair_errors(unknown_errs, latex_dir)
+
+        _log.error(f"Repair exhausted after {max_attempts} attempts")
+        return None

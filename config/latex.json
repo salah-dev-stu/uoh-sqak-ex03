@@ -1,5 +1,6 @@
 {
-  "version": "1.00",
+  "version": "1.01",
+  "max_repair_attempts": 3,
   "compiler": "/usr/local/texlive/2025/bin/universal-darwin/lualatex",
   "biber": "biber",
   "passes": 4,
