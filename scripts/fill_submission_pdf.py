@@ -28,7 +28,7 @@ TEMPLATE = REPO / "uoh-rl07-ex03-template.docx"
 
 GROUP_CODE = "uoh-sqak"
 SELF_GRADE = "85"
-EXERCISE_NUMBER = "02"
+EXERCISE_NUMBER = "03"
 GITHUB_URL = "https://github.com/salah-dev-stu/uoh-sqak-ex03"
 LATE = "no"
 
